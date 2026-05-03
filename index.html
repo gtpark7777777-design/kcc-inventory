@@ -27,7 +27,7 @@
   .sw.gray { background:#f3f4f6; border-color:#d1d5db; }
   .sw.red { background:#fee2e2; border-color:#fca5a5; }
 
-  .kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:14px; }
+  .kpi-row { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:14px; }
   .kpi { background:#fff; border:1px solid #e3e6ea; border-radius:9px; padding:12px 14px; cursor:pointer; transition:all 0.12s ease; user-select:none; }
   .kpi:hover { border-color:#9ca3af; box-shadow:0 2px 8px rgba(0,0,0,0.06); transform:translateY(-1px); }
   .kpi .label { color:#6b7280; font-size:11.5px; margin-bottom:4px; }
@@ -120,7 +120,8 @@
   <div class="kpi-row">
     <div class="kpi zuksi" data-tab="zuksi"><div class="label">즉시출고 가능</div><div class="value" id="k-zuksi">-</div><div class="delta">전 지점</div></div>
     <div class="kpi show" data-tab="show"><div class="label">전시</div><div class="value" id="k-show">-</div><div class="delta">전 지점</div></div>
-    <div class="kpi contracted" data-tab="contracted"><div class="label">대기 계약</div><div class="value" id="k-contracted">-</div><div class="delta">출고일 &gt; 오늘</div></div>
+    <div class="kpi contracted" data-tab="contracted"><div class="label">대기 계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta">출고일이 5월</div></div>
+    <div class="kpi contracted" data-tab="contracted-next"><div class="label">대기 계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta">출고일 6월 이후</div></div>
     <div class="kpi ipx" data-tab="ipx"><div class="label">입항대기</div><div class="value" id="k-ipx">-</div><div class="delta">한국 미도착</div></div>
     <div class="kpi storage" data-tab="storage"><div class="label">보관</div><div class="value" id="k-storage">-</div><div class="delta">보관차</div></div>
     <div class="kpi issue" data-tab="issue"><div class="label">이슈 ⚠</div><div class="value" id="k-issue">-</div><div class="delta">문제 차량</div></div>
@@ -140,7 +141,8 @@
   <div class="tabs">
     <button class="tab active" data-tab="zuksi">⚪ 즉시출고 <span class="cn" id="cn-zuksi">-</span></button>
     <button class="tab" data-tab="show">🟡 전시 <span class="cn" id="cn-show">-</span></button>
-    <button class="tab" data-tab="contracted">🟢 대기 계약 <span class="cn" id="cn-contracted">-</span></button>
+    <button class="tab" data-tab="contracted">🟢 대기 계약 (금월) <span class="cn" id="cn-contracted">-</span></button>
+    <button class="tab" data-tab="contracted-next">🟢 대기 계약 (5월外) <span class="cn" id="cn-contracted-next">-</span></button>
     <button class="tab" data-tab="ipx">🟣 입항대기 <span class="cn" id="cn-ipx">-</span></button>
     <button class="tab" data-tab="storage">⬜ 보관 <span class="cn" id="cn-storage">-</span></button>
     <button class="tab" data-tab="issue">🔴 이슈 <span class="cn" id="cn-issue">-</span></button>
@@ -154,9 +156,13 @@
     <div class="toolbar"><input type="text" id="s-q" placeholder="모델/색상/VIN 검색" /><select id="s-branch"><option value="">지점 전체</option></select></div>
     <div id="s-content"></div>
   </div>
-  <div class="panel" id="panel-contracted" style="display:none;"><h2>대기 계약</h2><div class="desc">계약 체결 + 출고일이 오늘 이후. 출고일 가까운 순.</div>
+  <div class="panel" id="panel-contracted" style="display:none;"><h2>대기 계약 (금월·5월)</h2><div class="desc">계약 체결 + 출고일이 2026-05인 차량. 출고일 가까운 순.</div>
     <div class="toolbar"><input type="text" id="c-q" placeholder="고객/담당/모델 검색" /></div>
     <div id="c-content"></div>
+  </div>
+  <div class="panel" id="panel-contracted-next" style="display:none;"><h2>대기 계약 (5월外·6월 이후)</h2><div class="desc">계약 체결 + 출고일이 6월 이후로 잡힌 차량. 출고일 가까운 순.</div>
+    <div class="toolbar"><input type="text" id="cn-q" placeholder="고객/담당/모델 검색" /></div>
+    <div id="cn-content"></div>
   </div>
   <div class="panel" id="panel-ipx" style="display:none;"><h2>입항대기 (배정 / 미입항)</h2><div class="desc">매입="배정"으로 한국 미도착. 항구도착 예정월별 그룹.</div>
     <div class="toolbar"><input type="text" id="i-q" placeholder="모델/색상 검색" /><select id="i-model"><option value="">모델 전체</option></select></div>
@@ -264,6 +270,8 @@ function buildRecords(rows) {
     staff: cidx('담당'), customer: cidx('고객'),
     remark: cidx('Remark'), pdi: cidx('PDI'),
     msrp: headers.findIndex(h => h.includes('★MSRP★') || h.includes('MSRP★')),
+    msrpBase: cidx('기본MSRP'),
+    optAmount: cidx('추가옵션'),
     purchaseType: cidx('매입', true), purchaseDate: cidx('매입일'),
   };
   const today = todayStr();
@@ -283,6 +291,7 @@ function buildRecords(rows) {
       register_date: get(ci.register),
       staff: get(ci.staff), customer: get(ci.customer),
       remark: get(ci.remark), pdi: get(ci.pdi), msrp: get(ci.msrp),
+      msrp_base: get(ci.msrpBase), opt_amount: get(ci.optAmount),
       purchase_type: get(ci.purchaseType), purchase_date: normDate(get(ci.purchaseDate)),
     };
     rec.is_showroom = (rec.branch_disp||'').includes('전시차');
@@ -341,7 +350,7 @@ function drawCharts(records, mayRel, mayCon) {
 // === 테이블 렌더러 ===
 function renderCarTable(rows, cols) {
   if (!rows.length) return `<div class="empty">표시할 차량이 없습니다.</div>`;
-  const titles = { cat:'분류', branch:'지점', model:'모델', my:'MY', color:'색상', msrp:'MSRP', arr:'항구도착', inb:'입고', cd:'계약일', rd:'출고일', staff:'담당', cs:'고객', vin:'VIN', remark:'비고', pd:'매입일', pt:'매입타입', reg:'등록완료일' };
+  const titles = { cat:'분류', branch:'지점', model:'모델', my:'MY', color:'색상', msrp:'★MSRP★', msrpBase:'기본MSRP', opt:'옵션 코드', optAmount:'옵션 금액', arr:'항구도착', inb:'입고', cd:'계약일', rd:'출고일', staff:'담당', cs:'고객', vin:'VIN', remark:'비고', pd:'매입일', pt:'매입타입', reg:'등록완료일' };
   const head = `<thead><tr>${cols.map(c=>`<th class="${c==='msrp'?'num':''}">${titles[c]||c}</th>`).join('')}</tr></thead>`;
   const body = rows.map(r => {
     const cls = colorClass(r.cat);
@@ -352,7 +361,18 @@ function renderCarTable(rows, cols) {
         case 'model': return `<td><span class="pill model">${modelShort(r.model)}</span><div style="color:#6b7280;font-size:11px;margin-top:2px;">${r.engine||''}</div></td>`;
         case 'my': return `<td class="nowrap">${r.my||''}</td>`;
         case 'color': return `<td style="max-width:220px;">${r.ext_color||''}<div style="color:#6b7280;font-size:10.5px;margin-top:2px;">${(r.int_color||'').slice(0,60)}</div></td>`;
-        case 'msrp': return `<td class="num">${fmt(r.msrp)}</td>`;
+        case 'msrp': return `<td class="num" style="font-weight:600;">${fmt(r.msrp)}</td>`;
+        case 'msrpBase': return `<td class="num" style="color:#6b7280;">${fmt(r.msrp_base)}</td>`;
+        case 'opt': {
+          const v = (r.option||'').trim();
+          if (!v) return `<td style="color:#9ca3af;">-</td>`;
+          return `<td style="max-width:200px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#0f172a;">${v}</td>`;
+        }
+        case 'optAmount': {
+          const v = (r.opt_amount||'').trim();
+          if (!v || v === '0' || v === '-') return `<td class="num" style="color:#9ca3af;">-</td>`;
+          return `<td class="num" style="color:#a16207;">+${fmt(v)}</td>`;
+        }
         case 'arr': return `<td class="nowrap">${shortDate(r.arrive)}</td>`;
         case 'inb': return `<td class="nowrap">${shortDate(r.inbound)}</td>`;
         case 'cd': return `<td class="nowrap">${shortDate(r.contract_date)}</td>`;
@@ -399,7 +419,7 @@ const renderers = {
     const groups = groupBy(rows, r => modelShort(r.model));
     const keys = Object.keys(groups).sort();
     document.getElementById('z-content').innerHTML = keys.length ?
-      keys.map(k=>`<div class="group-block"><div class="group-head"><span>🚙 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','branch','model','my','color','msrp','arr','pd','pt','reg','vin','remark'])}</div>`).join('')
+      keys.map(k=>`<div class="group-block"><div class="group-head"><span>🚙 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','branch','model','my','color','opt','msrpBase','optAmount','msrp','arr','pd','pt','reg','vin','remark'])}</div>`).join('')
       : `<div class="empty">조건에 맞는 차량이 없습니다.</div>`;
   },
   show: () => {
@@ -410,14 +430,20 @@ const renderers = {
     const groups = groupBy(rows, r => r.branch_disp || '미정');
     const keys = Object.keys(groups).sort();
     document.getElementById('s-content').innerHTML = keys.length ?
-      keys.map(k => `<div class="group-block"><div class="group-head"><span>📍 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','msrp','inb','reg','vin','remark'])}</div>`).join('')
+      keys.map(k => `<div class="group-block"><div class="group-head"><span>📍 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','opt','msrp','inb','reg','vin','remark'])}</div>`).join('')
       : `<div class="empty">조건에 맞는 전시 차량이 없습니다.</div>`;
   },
   contracted: () => {
     const q=document.getElementById('c-q').value.trim();
-    let rows = DATA.records.filter(r => r.cat==='계약차량' && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    let rows = DATA.records.filter(r => r.cat==='계약차량' && (r.release_date||'').startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
-    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','msrp','rd','cd','arr','reg','staff','cs','vin','remark']);
+    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','rd','cd','arr','reg','staff','cs','vin','remark']);
+  },
+  'contracted-next': () => {
+    const q=document.getElementById('cn-q').value.trim();
+    let rows = DATA.records.filter(r => r.cat==='계약차량' && r.release_date && !r.release_date.startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
+    document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','rd','cd','arr','reg','staff','cs','vin','remark']);
   },
   ipx: () => {
     const q=document.getElementById('i-q').value.trim();
@@ -428,7 +454,7 @@ const renderers = {
     const groups = groupBy(rows, r => yyyymm(r.arrive));
     const keys = Object.keys(groups).sort();
     document.getElementById('i-content').innerHTML = keys.length ?
-      keys.map(k=>`<div class="group-block"><div class="group-head"><span>🛳 입항예정 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','msrp','arr','pt','reg','vin','remark'])}</div>`).join('')
+      keys.map(k=>`<div class="group-block"><div class="group-head"><span>🛳 입항예정 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','opt','msrp','arr','pt','reg','vin','remark'])}</div>`).join('')
       : `<div class="empty">조건에 맞는 입항대기 차량이 없습니다.</div>`;
   },
   storage: () => {
@@ -437,13 +463,13 @@ const renderers = {
     const groups = groupBy(rows, r => r.branch_disp || '미정');
     const keys = Object.keys(groups).sort();
     document.getElementById('g-content').innerHTML = keys.length ?
-      keys.map(k => `<div class="group-block"><div class="group-head"><span>📍 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','msrp','inb','reg','vin','remark'])}</div>`).join('')
+      keys.map(k => `<div class="group-block"><div class="group-head"><span>📍 ${k}</span><span class="gcnt">${groups[k].length}대</span></div>${renderCarTable(groups[k], ['cat','model','my','color','opt','msrp','inb','reg','vin','remark'])}</div>`).join('')
       : `<div class="empty">조건에 맞는 보관 차량이 없습니다.</div>`;
   },
   issue: () => {
     const q=document.getElementById('x-q').value.trim();
     let rows = DATA.records.filter(r => r.cat==='이슈' && srch(r,q,['model','engine','ext_color','vin','remark']));
-    document.getElementById('x-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','msrp','inb','staff','remark','vin']);
+    document.getElementById('x-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','inb','staff','remark','vin']);
   },
 };
 
@@ -453,13 +479,18 @@ function renderAll() {
   ['즉시출고','전시','계약차량','입항대기','보관','이슈'].forEach(c => sub[c] = DATA.records.filter(r => r.cat===c).length);
   document.getElementById('k-zuksi').textContent = sub['즉시출고'];
   document.getElementById('k-show').textContent = sub['전시'];
-  document.getElementById('k-contracted').textContent = sub['계약차량'];
+  // 대기 계약 분리: 5월 vs 6월 이후
+  const contractedMay = DATA.records.filter(r => r.cat==='계약차량' && (r.release_date||'').startsWith('2026-05')).length;
+  const contractedNext = DATA.records.filter(r => r.cat==='계약차량' && r.release_date && !r.release_date.startsWith('2026-05')).length;
+  document.getElementById('k-contracted').textContent = contractedMay;
+  document.getElementById('k-contracted-next').textContent = contractedNext;
   document.getElementById('k-ipx').textContent = sub['입항대기'];
   document.getElementById('k-storage').textContent = sub['보관'];
   document.getElementById('k-issue').textContent = sub['이슈'];
   document.getElementById('cn-zuksi').textContent = sub['즉시출고'];
   document.getElementById('cn-show').textContent = sub['전시'];
-  document.getElementById('cn-contracted').textContent = sub['계약차량'];
+  document.getElementById('cn-contracted').textContent = contractedMay;
+  document.getElementById('cn-contracted-next').textContent = contractedNext;
   document.getElementById('cn-ipx').textContent = sub['입항대기'];
   document.getElementById('cn-storage').textContent = sub['보관'];
   document.getElementById('cn-issue').textContent = sub['이슈'];
@@ -540,6 +571,7 @@ document.getElementById('btn-refresh').addEventListener('click', loadData);
 ['z-q','z-model'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.zuksi); e.addEventListener('change',renderers.zuksi);});
 ['s-q','s-branch'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.show); e.addEventListener('change',renderers.show);});
 document.getElementById('c-q').addEventListener('input',renderers.contracted);
+document.getElementById('cn-q').addEventListener('input',renderers['contracted-next']);
 ['i-q','i-model'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.ipx); e.addEventListener('change',renderers.ipx);});
 document.getElementById('g-q').addEventListener('input',renderers.storage);
 document.getElementById('x-q').addEventListener('input',renderers.issue);
@@ -547,7 +579,7 @@ document.getElementById('x-q').addEventListener('input',renderers.issue);
 // 탭
 function activateTab(k) {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === k));
-  ['zuksi','show','contracted','ipx','storage','issue'].forEach(id => {
+  ['zuksi','show','contracted','contracted-next','ipx','storage','issue'].forEach(id => {
     document.getElementById('panel-'+id).style.display = (id===k) ? '' : 'none';
   });
   try { localStorage.setItem('kcc-live-tab', k); } catch(e) {}
