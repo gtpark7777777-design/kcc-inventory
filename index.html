@@ -120,8 +120,8 @@
   <div class="kpi-row">
     <div class="kpi zuksi" data-tab="zuksi"><div class="label">즉시출고 가능</div><div class="value" id="k-zuksi">-</div><div class="delta">전 지점</div></div>
     <div class="kpi show" data-tab="show"><div class="label">전시</div><div class="value" id="k-show">-</div><div class="delta">전 지점</div></div>
-    <div class="kpi contracted" data-tab="contracted"><div class="label">대기 계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta">출고일이 5월</div></div>
-    <div class="kpi contracted" data-tab="contracted-next"><div class="label">대기 계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta">출고일 6월 이후</div></div>
+    <div class="kpi contracted" data-tab="contracted"><div class="label">대기 계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta">계약일이 5월</div></div>
+    <div class="kpi contracted" data-tab="contracted-next"><div class="label">대기 계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta">계약일 5월 외</div></div>
     <div class="kpi ipx" data-tab="ipx"><div class="label">입항대기</div><div class="value" id="k-ipx">-</div><div class="delta">한국 미도착</div></div>
     <div class="kpi storage" data-tab="storage"><div class="label">보관</div><div class="value" id="k-storage">-</div><div class="delta">보관차</div></div>
     <div class="kpi issue" data-tab="issue"><div class="label">이슈 ⚠</div><div class="value" id="k-issue">-</div><div class="delta">문제 차량</div></div>
@@ -156,11 +156,11 @@
     <div class="toolbar"><input type="text" id="s-q" placeholder="모델/색상/VIN 검색" /><select id="s-branch"><option value="">지점 전체</option></select></div>
     <div id="s-content"></div>
   </div>
-  <div class="panel" id="panel-contracted" style="display:none;"><h2>대기 계약 (금월·5월)</h2><div class="desc">계약 체결 + 출고일이 2026-05인 차량. 출고일 가까운 순.</div>
+  <div class="panel" id="panel-contracted" style="display:none;"><h2>대기 계약 (금월·5월)</h2><div class="desc">계약일이 2026-05인 모든 재고 차량. 계약일 빠른 순.</div>
     <div class="toolbar"><input type="text" id="c-q" placeholder="고객/담당/모델 검색" /></div>
     <div id="c-content"></div>
   </div>
-  <div class="panel" id="panel-contracted-next" style="display:none;"><h2>대기 계약 (5월外·6월 이후)</h2><div class="desc">계약 체결 + 출고일이 6월 이후로 잡힌 차량. 출고일 가까운 순.</div>
+  <div class="panel" id="panel-contracted-next" style="display:none;"><h2>대기 계약 (5월外)</h2><div class="desc">계약일이 5월 외 다른 월(이전 달 포함)인 모든 재고 차량. 계약일 최근순.</div>
     <div class="toolbar"><input type="text" id="cn-q" placeholder="고객/담당/모델 검색" /></div>
     <div id="cn-content"></div>
   </div>
@@ -435,15 +435,15 @@ const renderers = {
   },
   contracted: () => {
     const q=document.getElementById('c-q').value.trim();
-    let rows = DATA.records.filter(r => r.cat==='계약차량' && (r.release_date||'').startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
-    rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
-    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','rd','cd','arr','reg','staff','cs','vin','remark']);
+    let rows = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    rows.sort((a,b)=>(a.contract_date||'9').localeCompare(b.contract_date||'9'));
+    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
   'contracted-next': () => {
     const q=document.getElementById('cn-q').value.trim();
-    let rows = DATA.records.filter(r => r.cat==='계약차량' && r.release_date && !r.release_date.startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
-    rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
-    document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','rd','cd','arr','reg','staff','cs','vin','remark']);
+    let rows = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith('2026-05') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    rows.sort((a,b)=>(b.contract_date||'').localeCompare(a.contract_date||''));
+    document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
   ipx: () => {
     const q=document.getElementById('i-q').value.trim();
@@ -479,9 +479,9 @@ function renderAll() {
   ['즉시출고','전시','계약차량','입항대기','보관','이슈'].forEach(c => sub[c] = DATA.records.filter(r => r.cat===c).length);
   document.getElementById('k-zuksi').textContent = sub['즉시출고'];
   document.getElementById('k-show').textContent = sub['전시'];
-  // 대기 계약 분리: 5월 vs 6월 이후
-  const contractedMay = DATA.records.filter(r => r.cat==='계약차량' && (r.release_date||'').startsWith('2026-05')).length;
-  const contractedNext = DATA.records.filter(r => r.cat==='계약차량' && r.release_date && !r.release_date.startsWith('2026-05')).length;
+  // 대기 계약 분리: 계약일 기준 — 5월 vs 그 외
+  const contractedMay = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith('2026-05')).length;
+  const contractedNext = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith('2026-05')).length;
   document.getElementById('k-contracted').textContent = contractedMay;
   document.getElementById('k-contracted-next').textContent = contractedNext;
   document.getElementById('k-ipx').textContent = sub['입항대기'];
