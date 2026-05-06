@@ -154,7 +154,7 @@
 
   <div class="chart-row full">
     <div class="chart-card">
-      <h3>🟪 입항대기 차량 (입항 일자별 · 모델별)</h3>
+      <h3 id="h3-ipx">🟪 입항대기 차량 (입항 예정 · 모델별)</h3>
       <div class="chart-box ipx-box"><canvas id="chart-ipx"></canvas></div>
     </div>
   </div>
@@ -330,14 +330,12 @@ function buildRecords(rows) {
     rec.has_contract = !!(rec.contract_no || (rec.contract_date && rec.contract_date.startsWith('20')));
     rec.has_inbound = !!rec.inbound;
     rec.cat = classify(rec, today);
-    // 해당월 출고/계약
-    const rawRel = get(ci.release); const rawCon = get(ci.contractDate);
-    const isCurMonth = (v) => v.includes(CURMONTH+'월') || new RegExp('(?:^|[^0-9])'+CURMONTH+'/\\d').test(v) || (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM)) || (rec.contract_date && rec.contract_date.startsWith(CUR_YYYY_MM));
-    if (isCurMonth(rawRel) || (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM))) {
+    // 해당월 출고/계약 — contract_date / release_date 정확히 매칭
+    if (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM)) {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayRel[b] = (mayRel[b]||0) + 1;
     }
-    if (isCurMonth(rawCon) || (rec.contract_date && rec.contract_date.startsWith(CUR_YYYY_MM))) {
+    if (rec.contract_date && rec.contract_date.startsWith(CUR_YYYY_MM)) {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayCon[b] = (mayCon[b]||0) + 1;
     }
@@ -393,8 +391,9 @@ function drawCharts(records, mayRel, mayCon) {
     data: { labels: showBranches, datasets: showDatasets },
     options: { responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0,stepSize:1}}}, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}대`}}} }
   });
-  // 입항대기 차트 — 입항 일자별 모델별 스택
-  const ipxCars = records.filter(r => r.cat === '입항대기');
+  // 입항대기 차트 — 현재 월 1일 이후 입항만
+  const monthStart = CUR_YYYY_MM + '-01';
+  const ipxCars = records.filter(r => r.cat === '입항대기' && r.arrive && r.arrive >= monthStart);
   const ipxByDate = {};
   ipxCars.forEach(r => {
     const sd = shortDate(r.arrive) || '미정';
