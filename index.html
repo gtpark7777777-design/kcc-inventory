@@ -179,7 +179,7 @@
     <div id="s-content"></div>
   </div>
   <div class="panel" id="panel-contracted" style="display:none;"><h2 id="h2-contracted">계약 (금월)</h2><div class="desc" id="desc-contracted">계약일이 해당월인 모든 재고 차량. 계약일 빠른 순.</div>
-    <div class="toolbar"><input type="text" id="c-q" placeholder="고객/담당/모델 검색" /></div>
+    <div class="toolbar"><input type="text" id="c-q" placeholder="고객/담당/모델 검색" /><select id="c-branch"><option value="">지점 전체</option></select></div>
     <div id="c-content"></div>
   </div>
   <div class="panel" id="panel-contracted-next" style="display:none;"><h2 id="h2-contracted-next">계약 (5월外)</h2><div class="desc" id="desc-contracted-next">계약일이 해당월 외 다른 월인 모든 재고 차량. 계약일 최근순.</div>
@@ -559,7 +559,12 @@ const renderers = {
   },
   contracted: () => {
     const q=document.getElementById('c-q').value.trim();
+    const bf=document.getElementById('c-branch').value;
     let rows = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    if (bf) rows = rows.filter(r => {
+      const dispBranch = r.branch_disp ? r.branch_disp.replace('전시차','').replace('보관차','').trim() : '';
+      return r.branch === bf || r.release_place === bf || dispBranch === bf;
+    });
     rows.sort((a,b)=>(a.contract_date||'9').localeCompare(b.contract_date||'9'));
     document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
@@ -636,6 +641,7 @@ function renderAll() {
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
   fillSel('i-model', [...new Set(DATA.records.filter(r=>r.cat==='입항대기').map(r=>modelShort(r.model)))].sort());
   fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
+  fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   // 차트
   drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
   // 모든 탭 렌더
@@ -719,6 +725,7 @@ document.getElementById('btn-refresh').addEventListener('click', loadData);
 ['z-q','z-model'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.zuksi); e.addEventListener('change',renderers.zuksi);});
 ['s-q','s-branch'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.show); e.addEventListener('change',renderers.show);});
 document.getElementById('c-q').addEventListener('input',renderers.contracted);
+document.getElementById('c-branch').addEventListener('change',renderers.contracted);
 document.getElementById('cn-q').addEventListener('input',renderers['contracted-next']);
 ['i-q','i-model'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.ipx); e.addEventListener('change',renderers.ipx);});
 document.getElementById('g-q').addEventListener('input',renderers.storage);
@@ -734,7 +741,35 @@ function activateTab(k) {
   try { localStorage.setItem('kcc-live-tab', k); } catch(e) {}
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
-document.querySelectorAll('.kpi[data-tab]').forEach(c => c.addEventListener('click', () => activateTab(c.dataset.tab)));
+// KPI 카드 클릭 → 탭 이동 + 해당 탭의 모든 필터 초기화(전체 데이터) + 패널로 스크롤
+const KPI_FILTERS = {
+  'zuksi': ['z-q', 'z-model'],
+  'show': ['s-q', 's-branch'],
+  'contracted': ['c-q', 'c-branch'],
+  'contracted-next': ['cn-q'],
+  'ipx': ['i-q', 'i-model'],
+  'storage': ['g-q'],
+  'issue': ['x-q'],
+  'release-month': ['rm-q', 'rm-branch']
+};
+document.querySelectorAll('.kpi[data-tab]').forEach(c => {
+  c.style.cursor = 'pointer';
+  c.addEventListener('click', () => {
+    const tabKey = c.dataset.tab;
+    activateTab(tabKey);
+    // 해당 탭의 필터들을 모두 초기화 → 전체 데이터 표시
+    (KPI_FILTERS[tabKey] || []).forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value !== '') {
+        el.value = '';
+        el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', {bubbles: true}));
+      }
+    });
+    // 패널로 부드럽게 스크롤
+    const panel = document.getElementById('panel-' + tabKey);
+    if (panel) setTimeout(() => panel.scrollIntoView({behavior:'smooth', block:'start'}), 80);
+  });
+});
 try { const s = localStorage.getItem('kcc-live-tab'); if (s) { const t = document.querySelector(`.tab[data-tab="${s}"]`); if (t) t.click(); } } catch(e) {}
 
 // === 동적 월 라벨 업데이트 ===
@@ -793,65 +828,75 @@ setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
 </style>
 <script>
 (function(){
-  function bindChartPopup(){
-    var canvas=document.getElementById('chart-release');
-    if(!canvas){setTimeout(bindChartPopup,500);return;}
-    if(canvas._popupBound)return;
-    canvas._popupBound=true;
-    canvas.addEventListener('mousemove',function(e){var ch=Chart.getChart('chart-release');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);canvas.style.cursor=pts.length>0?'pointer':'default';});
-    canvas.addEventListener('click',function(e){var ch=Chart.getChart('chart-release');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);if(!pts.length)return;var pt=pts[0];var branch=ch.data.labels[pt.index];var dsLabel=ch.data.datasets[pt.datasetIndex].label;var type=dsLabel==='출고'?'release':'contract';showChartPopup(branch,type);});
+  // 공통 헬퍼: select 드롭다운에 값 설정 + change 이벤트 발생
+  function setSelectAndFire(id, val){
+    var sel = document.getElementById(id);
+    if(!sel) return;
+    var match = Array.from(sel.options).find(function(o){return o.value === val;});
+    sel.value = match ? val : '';
+    sel.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  function showChartPopup(branch,type){
-    if(typeof DATA==='undefined'||!DATA.records)return;
-    var isRelease=(type==='release');var typeLabel=isRelease?'출고':'계약';var badgeClass=isRelease?'release':'contract';
-    var src = (DATA.allRecords && DATA.allRecords.length) ? DATA.allRecords : DATA.records;
-    var filtered=src.filter(function(r){var dateVal=isRelease?r.release_date:r.contract_date;if(!dateVal||!dateVal.startsWith(CUR_YYYY_MM))return false;var dispBranch=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return(r.branch===branch||r.release_place===branch||dispBranch===branch||(!r.branch&&!r.release_place&&!dispBranch&&branch==='미지정'));});
-    filtered.sort(function(a,b){var da=(isRelease?a.release_date:a.contract_date)||'';var db=(isRelease?b.release_date:b.contract_date)||'';return da.localeCompare(db);});
-    var cardsHtml='';
-    if(!filtered.length){cardsHtml='<div class="cm-empty">해당 데이터가 없습니다.</div>';}
-    else{filtered.forEach(function(r){var sm=r.model.replace(/\s*\([^)]*\)\s*/g,'').trim();var dv=isRelease?r.release_date:r.contract_date;var dl=isRelease?'출고일':'계약일';var fd=dv?dv.replace(/^\d{4}-/,'').replace('-','/'):'-';
-    cardsHtml+='<div class="cm-card"><div class="cm-card-title">'+sm+'<span class="cm-my">MY'+(r.my||'-')+'</span></div><div class="cm-card-grid"><div><span class="cm-label">'+dl+'</span><br><span class="cm-val">'+fd+'</span></div><div><span class="cm-label">외장</span><br><span class="cm-val">'+(r.ext_color||'-')+'</span></div><div><span class="cm-label">MSRP</span><br><span class="cm-val">'+(r.msrp||'-')+'</span></div><div><span class="cm-label">담당</span><br><span class="cm-val">'+(r.staff||'-')+'</span></div><div><span class="cm-label">고객</span><br><span class="cm-val">'+(r.customer||'-')+'</span></div><div><span class="cm-label">비고</span><br><span class="cm-val">'+(r.remark||'-')+'</span></div></div></div>';});}
-    var ov=document.createElement('div');ov.className='chart-modal-overlay';
-    ov.innerHTML='<div class="chart-modal"><div class="chart-modal-header"><h3>'+branch+' <span class="badge '+badgeClass+'">'+typeLabel+' '+filtered.length+'건</span></h3><button class="chart-modal-close" title="닫기">&times;</button></div><div class="chart-modal-body">'+cardsHtml+'</div></div>';
-    function close(){if(ov.parentNode)ov.remove();}
-    ov.querySelector('.chart-modal-close').onclick=close;
-    ov.addEventListener('click',function(e){if(e.target===ov)close();});
-    document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',esc);}});
-    document.body.appendChild(ov);
+  // 탭 활성화 + 패널로 부드럽게 스크롤
+  function activateAndScroll(tabKey){
+    if(typeof activateTab === 'function') activateTab(tabKey);
+    var panel = document.getElementById('panel-'+tabKey);
+    if(panel) setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'});}, 80);
   }
-  // === 즉시출고 차트 클릭 → 즉시출고 탭 + 모델 필터 ===
-  function bindZuksiClick(){
-    var canvas=document.getElementById('chart-zuksi');
-    if(!canvas){setTimeout(bindZuksiClick,500);return;}
-    if(canvas._zuksiBound)return;
-    canvas._zuksiBound=true;
-    canvas.addEventListener('mousemove',function(e){var ch=Chart.getChart('chart-zuksi');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);canvas.style.cursor=pts.length>0?'pointer':'default';});
-    canvas.addEventListener('click',function(e){
-      var ch=Chart.getChart('chart-zuksi');if(!ch)return;
-      var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);
-      if(!pts.length)return;
-      var modelLabel=ch.data.labels[pts[0].index];
-      // 1. 즉시출고 탭 활성화
-      if(typeof activateTab==='function')activateTab('zuksi');
-      // 2. 모델 드롭다운에 해당 값 설정 + change 이벤트
-      var sel=document.getElementById('z-model');
-      if(sel){
-        var match=Array.from(sel.options).find(function(o){return o.value===modelLabel;});
-        sel.value=match?modelLabel:'';
-        sel.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      // 3. 즉시출고 패널로 부드럽게 스크롤
-      var panel=document.getElementById('panel-zuksi');
-      if(panel){setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'});},80);}
+  // 캔버스에 click + cursor pointer 핸들러 일괄 등록
+  function bindCanvas(canvasId, onClick){
+    var canvas = document.getElementById(canvasId);
+    if(!canvas){setTimeout(function(){bindCanvas(canvasId, onClick);}, 500);return;}
+    if(canvas._tabBound) return;
+    canvas._tabBound = true;
+    canvas.addEventListener('mousemove', function(e){
+      var ch = Chart.getChart(canvasId); if(!ch) return;
+      var pts = ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);
+      canvas.style.cursor = pts.length > 0 ? 'pointer' : 'default';
+    });
+    canvas.addEventListener('click', function(e){
+      var ch = Chart.getChart(canvasId); if(!ch) return;
+      var pts = ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);
+      if(!pts.length) return;
+      onClick(ch, pts[0]);
     });
   }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){setTimeout(bindChartPopup,1000);setTimeout(bindZuksiClick,1000);});}
-  else{setTimeout(bindChartPopup,1000);setTimeout(bindZuksiClick,1000);}
-  var obs=new MutationObserver(function(muts){muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.id==='chart-release'||(n.querySelector&&n.querySelector('#chart-release'))){setTimeout(bindChartPopup,500);}if(n.id==='chart-zuksi'||(n.querySelector&&n.querySelector('#chart-zuksi'))){setTimeout(bindZuksiClick,500);}});});});
-  var cb=document.getElementById('chart-release');
-  if(cb&&cb.parentElement)obs.observe(cb.parentElement,{childList:true,subtree:true});
-  var cz=document.getElementById('chart-zuksi');
-  if(cz&&cz.parentElement&&cz.parentElement!==(cb&&cb.parentElement))obs.observe(cz.parentElement,{childList:true,subtree:true});
+  function bindAll(){
+    // 1. 모델별 즉시출고 → 즉시출고 탭 + 모델 필터
+    bindCanvas('chart-zuksi', function(ch, pt){
+      var modelLabel = ch.data.labels[pt.index];
+      activateAndScroll('zuksi');
+      setSelectAndFire('z-model', modelLabel);
+    });
+    // 2. 지점별 계약·출고 → 계약(5월) or 출고(5월) 탭 + 지점 필터
+    bindCanvas('chart-release', function(ch, pt){
+      var branch = ch.data.labels[pt.index];
+      var dsLabel = ch.data.datasets[pt.datasetIndex].label;
+      if(dsLabel === '출고'){
+        activateAndScroll('release-month');
+        setSelectAndFire('rm-branch', branch);
+      } else {
+        activateAndScroll('contracted');
+        setSelectAndFire('c-branch', branch);
+      }
+    });
+    // 3. 지점별 전시 → 전시 탭 + 지점 필터 (branch_disp 그대로)
+    bindCanvas('chart-show', function(ch, pt){
+      var branchDisp = ch.data.labels[pt.index];
+      activateAndScroll('show');
+      setSelectAndFire('s-branch', branchDisp);
+    });
+    // 4. 입항대기 → 입항대기 탭 + 모델 필터 (모델 색깔 영역 클릭)
+    bindCanvas('chart-ipx', function(ch, pt){
+      var modelLabel = ch.data.datasets[pt.datasetIndex].label;
+      activateAndScroll('ipx');
+      setSelectAndFire('i-model', modelLabel);
+    });
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', function(){setTimeout(bindAll, 1000);});
+  } else {
+    setTimeout(bindAll, 1000);
+  }
 })();
 </script>
 </body>
