@@ -25,11 +25,13 @@
   .sw.white { background:#ffffff; border-color:#cbd5e1; }
   .sw.yellow { background:#fef9c3; border-color:#facc15; }
   .sw.green { background:#dcfce7; border-color:#86efac; }
+  .sw.orange { background:#ffedd5; border-color:#fdba74; }
+  .sw.blue { background:#dbeafe; border-color:#93c5fd; }
   .sw.purple { background:#ede9fe; border-color:#c4b5fd; }
   .sw.gray { background:#f3f4f6; border-color:#d1d5db; }
   .sw.red { background:#fee2e2; border-color:#fca5a5; }
 
-  .kpi-row { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; margin-bottom:14px; }
+  .kpi-row { display:grid; grid-template-columns:repeat(9,1fr); gap:8px; margin-bottom:14px; }
   .kpi { background:#fff; border:1px solid #e3e6ea; border-radius:9px; padding:12px 14px; cursor:pointer; transition:all 0.12s ease; user-select:none; }
   .kpi:hover { border-color:#9ca3af; box-shadow:0 2px 8px rgba(0,0,0,0.06); transform:translateY(-1px); }
   .kpi .label { color:#6b7280; font-size:11.5px; margin-bottom:4px; }
@@ -38,6 +40,7 @@
   .kpi.zuksi .value { color:#0f766e; }
   .kpi.show .value { color:#a16207; }
   .kpi.contracted .value { color:#15803d; }
+  .kpi.assign .value { color:#ea580c; }
   .kpi.release .value { color:#1d4ed8; }
   .kpi.ipx .value { color:#6b21a8; }
   .kpi.storage .value { color:#4b5563; }
@@ -83,6 +86,7 @@
   .pill.cw { background:#fff; color:#0f766e; border:1px solid #5eead4; }
   .pill.cy { background:#fefce8; color:#a16207; border:1px solid #fde047; }
   .pill.cg { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+  .pill.co { background:#ffedd5; color:#9a3412; border:1px solid #fdba74; }
   .pill.cgr { background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; }
   .pill.cp { background:#ede9fe; color:#6b21a8; border:1px solid #c4b5fd; }
   .pill.cr { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
@@ -112,6 +116,8 @@
         <span><span class="sw white"></span>즉시출고</span>
         <span><span class="sw yellow"></span>전시</span>
         <span><span class="sw green"></span>계약</span>
+        <span><span class="sw orange"></span>배정</span>
+        <span><span class="sw blue"></span>출고</span>
         <span><span class="sw purple"></span>입항대기</span>
         <span><span class="sw gray"></span>보관</span>
         <span><span class="sw red"></span>이슈</span>
@@ -132,6 +138,7 @@
     <div class="kpi zuksi" data-tab="zuksi"><div class="label">즉시출고 가능</div><div class="value" id="k-zuksi">-</div><div class="delta">전 지점</div></div>
     <div class="kpi show" data-tab="show"><div class="label">전시</div><div class="value" id="k-show">-</div><div class="delta">전 지점</div></div>
     <div class="kpi contracted" data-tab="contracted" style="cursor:pointer;"><div class="label" id="lbl-contracted">계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta" id="delta-contracted">계약일이 해당월</div></div>
+    <div class="kpi assign" data-tab="assign" style="cursor:pointer;"><div class="label" id="lbl-assign">배정 (5월)</div><div class="value" id="k-assign">-</div><div class="delta" id="delta-assign">배정일이 해당월</div></div>
     <div class="kpi release" data-tab="release-month" style="cursor:pointer;"><div class="label" id="lbl-release-month">출고 (5월)</div><div class="value" id="k-release-month">-</div><div class="delta" id="delta-release-month">출고일이 해당월</div></div>
     <div class="kpi contracted" data-tab="contracted-next" style="cursor:pointer;"><div class="label" id="lbl-contracted-next">계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta" id="delta-contracted-next">계약일 해당월 외</div></div>
     <div class="kpi ipx" data-tab="ipx"><div class="label">입항대기</div><div class="value" id="k-ipx">-</div><div class="delta">한국 미도착</div></div>
@@ -169,6 +176,7 @@
     <button class="tab active" data-tab="zuksi">⬜ 즉시출고 <span class="cn" id="cn-zuksi">-</span></button>
     <button class="tab" data-tab="show">🟨 전시 <span class="cn" id="cn-show">-</span></button>
     <button class="tab" data-tab="contracted">🟩 계약 (<span class="month-cur">5월</span>) <span class="cn" id="cn-contracted">-</span></button>
+    <button class="tab" data-tab="assign">🟧 배정 (<span class="month-cur">5월</span>) <span class="cn" id="cn-assign">-</span></button>
     <button class="tab" data-tab="release-month">🟦 출고 (<span class="month-cur">5월</span>) <span class="cn" id="cn-release-month">-</span></button>
     <button class="tab" data-tab="contracted-next">🟩 계약 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-contracted-next">-</span></button>
     <button class="tab" data-tab="ipx">🟪 입항대기 <span class="cn" id="cn-ipx">-</span></button>
@@ -204,6 +212,10 @@
     <div class="toolbar"><input type="text" id="x-q" placeholder="모델/내용 검색" /></div>
     <div id="x-content"></div>
   </div>
+  <div class="panel" id="panel-assign" style="display:none;"><h2 id="h2-assign">배정 (5월)</h2><div class="desc" id="desc-assign">배정일이 해당월인 차량. 배정일 빠른 순.</div>
+    <div class="toolbar"><input type="text" id="a-q" placeholder="고객/담당/모델 검색" /><select id="a-branch"><option value="">지점 전체</option></select></div>
+    <div id="a-content"></div>
+  </div>
   <div class="panel" id="panel-release-month" style="display:none;"><h2 id="h2-release-month">출고 (5월)</h2><div class="desc" id="desc-release-month">출고일이 해당월인 차량. 출고일 빠른 순.</div>
     <div class="toolbar"><input type="text" id="rm-q" placeholder="고객/담당/모델 검색" /><select id="rm-branch"><option value="">지점 전체</option></select></div>
     <div id="rm-content"></div>
@@ -229,7 +241,7 @@ function fmt(n) { if (!n) return ''; const s=String(n).replace(/[^0-9]/g,''); if
 function shortDate(s) { if (!s) return '-'; const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[2]}/${m[3]}`:s; }
 function modelShort(m) { if(!m) return ''; return m.replace(/\s*\([^)]*\)/g,'').trim(); }
 function yyyymm(s) { if(!s) return '미정'; const m=String(s).match(/^(\d{4})-(\d{2})/); return m?`${m[1]}.${m[2]}`:'미정'; }
-function colorClass(cat) { return ({'즉시출고':'cw','전시':'cy','계약차량':'cg','입항대기':'cp','보관':'cgr','이슈':'cr'})[cat]||'cgr'; }
+function colorClass(cat) { return ({'즉시출고':'cw','전시':'cy','계약차량':'cg','배정':'co','입항대기':'cp','보관':'cgr','이슈':'cr'})[cat]||'cgr'; }
 function pillCat(cat) { return `<span class="pill ${colorClass(cat)}">${cat}</span>`; }
 function normDate(s) {
   if (!s) return '';
@@ -274,6 +286,7 @@ function classify(r, today) {
   const rm = r.remark||'';
   const rd = r.release_date;
   const arr = r.arrive;
+  const ad = r.assign_date;
   if (reg.includes('선등록')) return '출고완료';
   if (rm.includes('이슈')) return '이슈';
   if (rd && rd <= today) return '출고완료';
@@ -283,6 +296,8 @@ function classify(r, today) {
   }
   if (r.is_showroom) return '전시';
   if (r.is_storage) return '보관';
+  // 배정일이 있으면 → "배정" (입항대기에서 빠짐)
+  if (ad) return '배정';
   if (arr && arr <= today) return '즉시출고';
   if (r.has_inbound) return '즉시출고';
   if (['매입','스왑'].includes(r.purchase_type)) return '즉시출고';
@@ -621,6 +636,17 @@ const renderers = {
     rows.sort((a,b)=>(b.contract_date||'').localeCompare(a.contract_date||''));
     document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
+  assign: () => {
+    const q=document.getElementById('a-q').value.trim();
+    const bf=document.getElementById('a-branch').value;
+    let rows = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    if (bf) rows = rows.filter(r => {
+      const dispBranch = r.branch_disp ? r.branch_disp.replace('전시차','').replace('보관차','').trim() : '';
+      return r.branch === bf || r.release_place === bf || dispBranch === bf;
+    });
+    rows.sort((a,b)=>(a.assign_date||'9').localeCompare(b.assign_date||'9'));
+    document.getElementById('a-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
+  },
   ipx: () => {
     const q=document.getElementById('i-q').value.trim();
     const mf=document.getElementById('i-model').value;
@@ -683,12 +709,17 @@ function renderAll() {
   document.getElementById('cn-release-month').textContent = relMonth;
   const kRelM = document.getElementById('k-release-month');
   if (kRelM) kRelM.textContent = relMonth;
+  // 배정 카운트 (탭 + KPI 카드 양쪽 업데이트)
+  const assignMonth = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM)).length;
+  const cnA = document.getElementById('cn-assign'); if (cnA) cnA.textContent = assignMonth;
+  const kA = document.getElementById('k-assign'); if (kA) kA.textContent = assignMonth;
   // 셀렉트 옵션
   fillSel('z-model', [...new Set(DATA.records.filter(r=>r.cat==='즉시출고').map(r=>modelShort(r.model)))].sort());
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
   fillSel('i-model', [...new Set(DATA.records.filter(r=>r.cat==='입항대기').map(r=>modelShort(r.model)))].sort());
   fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.cat!=='보관'&&r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
   fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
+  fillSel('a-branch', [...new Set(DATA.records.filter(r=>r.assign_date&&r.assign_date.startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   // 차트
   drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
   // 모든 탭 렌더
@@ -773,6 +804,7 @@ document.getElementById('btn-refresh').addEventListener('click', loadData);
 ['s-q','s-branch'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.show); e.addEventListener('change',renderers.show);});
 document.getElementById('c-q').addEventListener('input',renderers.contracted);
 document.getElementById('c-branch').addEventListener('change',renderers.contracted);
+['a-q','a-branch'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.addEventListener('input',renderers.assign); e.addEventListener('change',renderers.assign);});
 document.getElementById('cn-q').addEventListener('input',renderers['contracted-next']);
 ['i-q','i-model'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers.ipx); e.addEventListener('change',renderers.ipx);});
 document.getElementById('g-q').addEventListener('input',renderers.storage);
@@ -782,7 +814,7 @@ document.getElementById('x-q').addEventListener('input',renderers.issue);
 // 탭
 function activateTab(k) {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === k));
-  ['zuksi','show','contracted','contracted-next','ipx','storage','issue','release-month'].forEach(id => {
+  ['zuksi','show','contracted','contracted-next','ipx','storage','issue','release-month','assign'].forEach(id => {
     document.getElementById('panel-'+id).style.display = (id===k) ? '' : 'none';
   });
   try { localStorage.setItem('kcc-live-tab', k); } catch(e) {}
@@ -797,7 +829,8 @@ const KPI_FILTERS = {
   'ipx': ['i-q', 'i-model'],
   'storage': ['g-q'],
   'issue': ['x-q'],
-  'release-month': ['rm-q', 'rm-branch']
+  'release-month': ['rm-q', 'rm-branch'],
+  'assign': ['a-q', 'a-branch']
 };
 document.querySelectorAll('.kpi[data-tab]').forEach(c => {
   c.style.cursor = 'pointer';
@@ -843,6 +876,15 @@ const lblRM = document.getElementById('lbl-release-month');
 if (lblRM) lblRM.textContent = '출고 (' + CURMONTH_STR + ')';
 const descRM = document.getElementById('desc-release-month');
 if (descRM) descRM.textContent = '출고일이 ' + CURMONTH_STR + '인 차량. 출고일 빠른 순.';
+// 배정 동적 라벨
+const lblA = document.getElementById('lbl-assign');
+if (lblA) lblA.textContent = '배정 (' + CURMONTH_STR + ')';
+const deltaA = document.getElementById('delta-assign');
+if (deltaA) deltaA.textContent = '배정일이 ' + CURMONTH_STR;
+const h2A = document.getElementById('h2-assign');
+if (h2A) h2A.textContent = '배정 (' + CURMONTH_STR + ')';
+const descA = document.getElementById('desc-assign');
+if (descA) descA.textContent = '배정일이 ' + CURMONTH_STR + '인 차량. 배정일 빠른 순.';
 
 // 자동 로드
 loadData();
