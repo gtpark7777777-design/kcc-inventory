@@ -29,7 +29,7 @@
   .sw.gray { background:#f3f4f6; border-color:#d1d5db; }
   .sw.red { background:#fee2e2; border-color:#fca5a5; }
 
-  .kpi-row { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:14px; }
+  .kpi-row { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; margin-bottom:14px; }
   .kpi { background:#fff; border:1px solid #e3e6ea; border-radius:9px; padding:12px 14px; cursor:pointer; transition:all 0.12s ease; user-select:none; }
   .kpi:hover { border-color:#9ca3af; box-shadow:0 2px 8px rgba(0,0,0,0.06); transform:translateY(-1px); }
   .kpi .label { color:#6b7280; font-size:11.5px; margin-bottom:4px; }
@@ -38,14 +38,17 @@
   .kpi.zuksi .value { color:#0f766e; }
   .kpi.show .value { color:#a16207; }
   .kpi.contracted .value { color:#15803d; }
+  .kpi.release .value { color:#1d4ed8; }
   .kpi.ipx .value { color:#6b21a8; }
   .kpi.storage .value { color:#4b5563; }
   .kpi.issue .value { color:#b91c1c; }
 
   .chart-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:14px; }
+  .chart-row.full { grid-template-columns:1fr; }
   .chart-card { background:#fff; border:1px solid #e3e6ea; border-radius:10px; padding:13px; }
   .chart-card h3 { margin:0 0 6px 0; font-size:13px; font-weight:600; color:#111827; }
   .chart-card .chart-box { position:relative; height:240px; }
+  .chart-card .chart-box.ipx-box { height:300px; }
 
   .tabs { display:flex; gap:2px; border-bottom:1px solid #e3e6ea; flex-wrap:wrap; }
   .tab { background:transparent; border:none; padding:10px 14px; font-size:13px; font-weight:500; color:#6b7280; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
@@ -126,8 +129,9 @@
   <div class="kpi-row">
     <div class="kpi zuksi" data-tab="zuksi"><div class="label">즉시출고 가능</div><div class="value" id="k-zuksi">-</div><div class="delta">전 지점</div></div>
     <div class="kpi show" data-tab="show"><div class="label">전시</div><div class="value" id="k-show">-</div><div class="delta">전 지점</div></div>
-    <div class="kpi contracted" data-tab="contracted"><div class="label" id="lbl-contracted">계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta" id="delta-contracted">계약일이 해당월</div></div>
-    <div class="kpi contracted" data-tab="contracted-next"><div class="label" id="lbl-contracted-next">계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta" id="delta-contracted-next">계약일 해당월 외</div></div>
+    <div class="kpi contracted" data-tab="contracted" style="cursor:pointer;"><div class="label" id="lbl-contracted">계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta" id="delta-contracted">계약일이 해당월</div></div>
+    <div class="kpi release" data-tab="release-month" style="cursor:pointer;"><div class="label" id="lbl-release-month">출고 (5월)</div><div class="value" id="k-release-month">-</div><div class="delta" id="delta-release-month">출고일이 해당월</div></div>
+    <div class="kpi contracted" data-tab="contracted-next" style="cursor:pointer;"><div class="label" id="lbl-contracted-next">계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta" id="delta-contracted-next">계약일 해당월 외</div></div>
     <div class="kpi ipx" data-tab="ipx"><div class="label">입항대기</div><div class="value" id="k-ipx">-</div><div class="delta">한국 미도착</div></div>
     <div class="kpi storage" data-tab="storage"><div class="label">보관</div><div class="value" id="k-storage">-</div><div class="delta">보관차</div></div>
     <div class="kpi issue" data-tab="issue"><div class="label">이슈 ⚠</div><div class="value" id="k-issue">-</div><div class="delta">문제 차량</div></div>
@@ -148,15 +152,22 @@
     </div>
   </div>
 
+  <div class="chart-row full">
+    <div class="chart-card">
+      <h3>🟪 입항대기 차량 (입항 일자별 · 모델별)</h3>
+      <div class="chart-box ipx-box"><canvas id="chart-ipx"></canvas></div>
+    </div>
+  </div>
+
   <div class="tabs">
-    <button class="tab active" data-tab="zuksi">⚪ 즉시출고 <span class="cn" id="cn-zuksi">-</span></button>
-    <button class="tab" data-tab="show">🟡 전시 <span class="cn" id="cn-show">-</span></button>
-    <button class="tab" data-tab="contracted">🟢 계약 (<span class="month-cur">5월</span>) <span class="cn" id="cn-contracted">-</span></button>
-    <button class="tab" data-tab="release-month">🔵 출고 (<span class="month-cur">5월</span>) <span class="cn" id="cn-release-month">-</span></button>
-    <button class="tab" data-tab="contracted-next">🟢 계약 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-contracted-next">-</span></button>
-    <button class="tab" data-tab="ipx">🟣 입항대기 <span class="cn" id="cn-ipx">-</span></button>
-    <button class="tab" data-tab="storage">⬜ 보관 <span class="cn" id="cn-storage">-</span></button>
-    <button class="tab" data-tab="issue">🔴 이슈 <span class="cn" id="cn-issue">-</span></button>
+    <button class="tab active" data-tab="zuksi">⬜ 즉시출고 <span class="cn" id="cn-zuksi">-</span></button>
+    <button class="tab" data-tab="show">🟨 전시 <span class="cn" id="cn-show">-</span></button>
+    <button class="tab" data-tab="contracted">🟩 계약 (<span class="month-cur">5월</span>) <span class="cn" id="cn-contracted">-</span></button>
+    <button class="tab" data-tab="release-month">🟦 출고 (<span class="month-cur">5월</span>) <span class="cn" id="cn-release-month">-</span></button>
+    <button class="tab" data-tab="contracted-next">🟩 계약 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-contracted-next">-</span></button>
+    <button class="tab" data-tab="ipx">🟪 입항대기 <span class="cn" id="cn-ipx">-</span></button>
+    <button class="tab" data-tab="storage">⬛ 보관 <span class="cn" id="cn-storage">-</span></button>
+    <button class="tab" data-tab="issue">🟥 이슈 <span class="cn" id="cn-issue">-</span></button>
   </div>
 
   <div class="panel" id="panel-zuksi"><h2>즉시출고 가능 차량</h2><div class="desc">계약·출고 이력이 없고 한국 도착이 확정된 차량. 모델별 그룹.</div>
@@ -334,11 +345,11 @@ function buildRecords(rows) {
   }
   // 출고완료 제외
   const inStock = records.filter(r => r.cat !== '출고완료');
-  return { records: inStock, today, mayRelease: mayRel, mayContract: mayCon };
+  return { records: inStock, allRecords: records, today, mayRelease: mayRel, mayContract: mayCon };
 }
 
 // === 차트 인스턴스 ===
-let chartZ = null, chartR = null, chartS = null;
+let chartZ = null, chartR = null, chartS = null, chartIPX = null;
 function destroyChart(c) { if (c) c.destroy(); }
 const SHOW_COLORS = ['#0f766e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 function drawCharts(records, mayRel, mayCon) {
@@ -381,6 +392,56 @@ function drawCharts(records, mayRel, mayCon) {
     type:'bar',
     data: { labels: showBranches, datasets: showDatasets },
     options: { responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0,stepSize:1}}}, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}대`}}} }
+  });
+  // 입항대기 차트 — 입항 일자별 모델별 스택
+  const ipxCars = records.filter(r => r.cat === '입항대기');
+  const ipxByDate = {};
+  ipxCars.forEach(r => {
+    const sd = shortDate(r.arrive) || '미정';
+    if (!ipxByDate[sd]) ipxByDate[sd] = {};
+    const m = modelShort(r.model) || '기타';
+    ipxByDate[sd][m] = (ipxByDate[sd][m]||0) + 1;
+  });
+  // 일자 정렬 (MM/DD 형식, 미정은 마지막)
+  const ipxDates = Object.keys(ipxByDate).sort((a,b)=>{
+    if(a==='미정') return 1; if(b==='미정') return -1;
+    // MM/DD 비교
+    const pa = a.split('/').map(Number); const pb = b.split('/').map(Number);
+    if((pa[0]||0)!==(pb[0]||0)) return (pa[0]||0)-(pb[0]||0);
+    return (pa[1]||0)-(pb[1]||0);
+  });
+  const ipxModels = [...new Set(ipxCars.map(r=>modelShort(r.model)||'기타'))].sort();
+  const ipxDatasets = ipxModels.map((m, idx) => ({
+    label: m,
+    data: ipxDates.map(d => ipxByDate[d][m] || 0),
+    backgroundColor: SHOW_COLORS[idx % SHOW_COLORS.length],
+    borderRadius: 3,
+    stack: 'ipx'
+  }));
+  destroyChart(chartIPX);
+  chartIPX = new Chart(document.getElementById('chart-ipx'), {
+    type: 'bar',
+    data: { labels: ipxDates, datasets: ipxDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 0, autoSkip: true, autoSkipPadding: 8 } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0, stepSize: 1 } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
+            title: items => items.length ? `입항 ${items[0].label}` : '',
+            label: c => `${c.dataset.label}: ${c.parsed.y}대`,
+            footer: items => {
+              const total = items.reduce((s, it) => s + (it.parsed.y || 0), 0);
+              return `합계: ${total}대`;
+            }
+          }
+        }
+      }
+    }
   });
 }
 
@@ -566,9 +627,11 @@ function renderAll() {
   document.getElementById('cn-ipx').textContent = sub['입항대기'];
   document.getElementById('cn-storage').textContent = sub['보관'];
   document.getElementById('cn-issue').textContent = sub['이슈'];
-  // 출고 카운트
+  // 출고 카운트 (탭 + KPI 카드 양쪽 업데이트)
   const relMonth = DATA.records.filter(r => r.release_date && r.release_date.startsWith(CUR_YYYY_MM)).length;
   document.getElementById('cn-release-month').textContent = relMonth;
+  const kRelM = document.getElementById('k-release-month');
+  if (kRelM) kRelM.textContent = relMonth;
   // 셀렉트 옵션
   fillSel('z-model', [...new Set(DATA.records.filter(r=>r.cat==='즉시출고').map(r=>modelShort(r.model)))].sort());
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
@@ -597,7 +660,9 @@ async function loadData() {
     const results = await Promise.all(CSV_URLS.map(fetchOne));
     // 각 시트별 records 빌드 + 통합 dedup
     const seen = new Set();
+    const seenAll = new Set();
     let mergedRecords = [];
+    let mergedAllRecords = [];
     let mergedMayRel = {}, mergedMayCon = {};
     let today = todayStr();
     const sheetCounts = [];
@@ -616,6 +681,14 @@ async function loadData() {
           rec._sourceSheet = r.src.label;
           mergedRecords.push(rec);
         }
+        // 출고완료 포함 전체 (차트 클릭 팝업용)
+        for (const rec of (d.allRecords || d.records)) {
+          const key = (rec.order_no || '') + '|' + (rec.vin || '');
+          if (key === '|') continue;
+          if (seenAll.has(key)) continue;
+          seenAll.add(key);
+          mergedAllRecords.push(rec);
+        }
         // 5월 출고/계약은 전체재고 탭만 사용 (중복 카운트 방지)
         if (r.src.label === '전체재고') {
           mergedMayRel = d.mayRelease;
@@ -626,7 +699,7 @@ async function loadData() {
         sheetCounts.push(`${r.src.label} ⚠`);
       }
     }
-    DATA = { records: mergedRecords, today, mayRelease: mergedMayRel, mayContract: mergedMayCon };
+    DATA = { records: mergedRecords, allRecords: mergedAllRecords, today, mayRelease: mergedMayRel, mayContract: mergedMayCon };
     renderAll();
     const now = new Date();
     document.getElementById('snap-badge').textContent = `마지막 갱신 · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
@@ -685,6 +758,8 @@ const descCN = document.getElementById('desc-contracted-next');
 if (descCN) descCN.textContent = '계약일이 ' + CURMONTH_STR + ' 외 다른 월인 모든 재고 차량. 계약일 최근순.';
 const h2RM = document.getElementById('h2-release-month');
 if (h2RM) h2RM.textContent = '출고 (' + CURMONTH_STR + ')';
+const lblRM = document.getElementById('lbl-release-month');
+if (lblRM) lblRM.textContent = '출고 (' + CURMONTH_STR + ')';
 const descRM = document.getElementById('desc-release-month');
 if (descRM) descRM.textContent = '출고일이 ' + CURMONTH_STR + '인 차량. 출고일 빠른 순.';
 
@@ -730,7 +805,8 @@ setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
   function showChartPopup(branch,type){
     if(typeof DATA==='undefined'||!DATA.records)return;
     var isRelease=(type==='release');var typeLabel=isRelease?'출고':'계약';var badgeClass=isRelease?'release':'contract';
-    var filtered=DATA.records.filter(function(r){var dateVal=isRelease?r.release_date:r.contract_date;if(!dateVal||!dateVal.startsWith(CUR_YYYY_MM))return false;var dispBranch=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return(r.branch===branch||r.release_place===branch||dispBranch===branch||(!r.branch&&!r.release_place&&!dispBranch&&branch==='미지정'));});
+    var src = (DATA.allRecords && DATA.allRecords.length) ? DATA.allRecords : DATA.records;
+    var filtered=src.filter(function(r){var dateVal=isRelease?r.release_date:r.contract_date;if(!dateVal||!dateVal.startsWith(CUR_YYYY_MM))return false;var dispBranch=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return(r.branch===branch||r.release_place===branch||dispBranch===branch||(!r.branch&&!r.release_place&&!dispBranch&&branch==='미지정'));});
     filtered.sort(function(a,b){var da=(isRelease?a.release_date:a.contract_date)||'';var db=(isRelease?b.release_date:b.contract_date)||'';return da.localeCompare(db);});
     var cardsHtml='';
     if(!filtered.length){cardsHtml='<div class="cm-empty">해당 데이터가 없습니다.</div>';}
@@ -744,11 +820,39 @@ setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
     document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',esc);}});
     document.body.appendChild(ov);
   }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){setTimeout(bindChartPopup,1000);});}
-  else{setTimeout(bindChartPopup,1000);}
-  var obs=new MutationObserver(function(muts){muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.id==='chart-release'||(n.querySelector&&n.querySelector('#chart-release'))){setTimeout(bindChartPopup,500);}});});});
+  // === 즉시출고 차트 클릭 → 즉시출고 탭 + 모델 필터 ===
+  function bindZuksiClick(){
+    var canvas=document.getElementById('chart-zuksi');
+    if(!canvas){setTimeout(bindZuksiClick,500);return;}
+    if(canvas._zuksiBound)return;
+    canvas._zuksiBound=true;
+    canvas.addEventListener('mousemove',function(e){var ch=Chart.getChart('chart-zuksi');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);canvas.style.cursor=pts.length>0?'pointer':'default';});
+    canvas.addEventListener('click',function(e){
+      var ch=Chart.getChart('chart-zuksi');if(!ch)return;
+      var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);
+      if(!pts.length)return;
+      var modelLabel=ch.data.labels[pts[0].index];
+      // 1. 즉시출고 탭 활성화
+      if(typeof activateTab==='function')activateTab('zuksi');
+      // 2. 모델 드롭다운에 해당 값 설정 + change 이벤트
+      var sel=document.getElementById('z-model');
+      if(sel){
+        var match=Array.from(sel.options).find(function(o){return o.value===modelLabel;});
+        sel.value=match?modelLabel:'';
+        sel.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      // 3. 즉시출고 패널로 부드럽게 스크롤
+      var panel=document.getElementById('panel-zuksi');
+      if(panel){setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'});},80);}
+    });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){setTimeout(bindChartPopup,1000);setTimeout(bindZuksiClick,1000);});}
+  else{setTimeout(bindChartPopup,1000);setTimeout(bindZuksiClick,1000);}
+  var obs=new MutationObserver(function(muts){muts.forEach(function(m){m.addedNodes.forEach(function(n){if(n.id==='chart-release'||(n.querySelector&&n.querySelector('#chart-release'))){setTimeout(bindChartPopup,500);}if(n.id==='chart-zuksi'||(n.querySelector&&n.querySelector('#chart-zuksi'))){setTimeout(bindZuksiClick,500);}});});});
   var cb=document.getElementById('chart-release');
   if(cb&&cb.parentElement)obs.observe(cb.parentElement,{childList:true,subtree:true});
+  var cz=document.getElementById('chart-zuksi');
+  if(cz&&cz.parentElement&&cz.parentElement!==(cb&&cb.parentElement))obs.observe(cz.parentElement,{childList:true,subtree:true});
 })();
 </script>
 </body>
