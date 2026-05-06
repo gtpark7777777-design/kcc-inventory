@@ -106,7 +106,7 @@
       <div class="legend">
         <span><span class="sw white"></span>즉시출고</span>
         <span><span class="sw yellow"></span>전시</span>
-        <span><span class="sw green"></span>대기 계약</span>
+        <span><span class="sw green"></span>계약</span>
         <span><span class="sw purple"></span>입항대기</span>
         <span><span class="sw gray"></span>보관</span>
         <span><span class="sw red"></span>이슈</span>
@@ -126,8 +126,8 @@
   <div class="kpi-row">
     <div class="kpi zuksi" data-tab="zuksi"><div class="label">즉시출고 가능</div><div class="value" id="k-zuksi">-</div><div class="delta">전 지점</div></div>
     <div class="kpi show" data-tab="show"><div class="label">전시</div><div class="value" id="k-show">-</div><div class="delta">전 지점</div></div>
-    <div class="kpi contracted" data-tab="contracted"><div class="label" id="lbl-contracted">대기 계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta" id="delta-contracted">계약일이 해당월</div></div>
-    <div class="kpi contracted" data-tab="contracted-next"><div class="label" id="lbl-contracted-next">대기 계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta" id="delta-contracted-next">계약일 해당월 외</div></div>
+    <div class="kpi contracted" data-tab="contracted"><div class="label" id="lbl-contracted">계약 (금월)</div><div class="value" id="k-contracted">-</div><div class="delta" id="delta-contracted">계약일이 해당월</div></div>
+    <div class="kpi contracted" data-tab="contracted-next"><div class="label" id="lbl-contracted-next">계약 (5월外)</div><div class="value" id="k-contracted-next">-</div><div class="delta" id="delta-contracted-next">계약일 해당월 외</div></div>
     <div class="kpi ipx" data-tab="ipx"><div class="label">입항대기</div><div class="value" id="k-ipx">-</div><div class="delta">한국 미도착</div></div>
     <div class="kpi storage" data-tab="storage"><div class="label">보관</div><div class="value" id="k-storage">-</div><div class="delta">보관차</div></div>
     <div class="kpi issue" data-tab="issue"><div class="label">이슈 ⚠</div><div class="value" id="k-issue">-</div><div class="delta">문제 차량</div></div>
@@ -151,13 +151,12 @@
   <div class="tabs">
     <button class="tab active" data-tab="zuksi">⚪ 즉시출고 <span class="cn" id="cn-zuksi">-</span></button>
     <button class="tab" data-tab="show">🟡 전시 <span class="cn" id="cn-show">-</span></button>
-    <button class="tab" data-tab="contracted">🟢 대기 계약 (<span class="month-cur">5월</span>) <span class="cn" id="cn-contracted">-</span></button>
-    <button class="tab" data-tab="contracted-next">🟢 대기 계약 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-contracted-next">-</span></button>
+    <button class="tab" data-tab="contracted">🟢 계약 (<span class="month-cur">5월</span>) <span class="cn" id="cn-contracted">-</span></button>
+    <button class="tab" data-tab="release-month">🔵 출고 (<span class="month-cur">5월</span>) <span class="cn" id="cn-release-month">-</span></button>
+    <button class="tab" data-tab="contracted-next">🟢 계약 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-contracted-next">-</span></button>
     <button class="tab" data-tab="ipx">🟣 입항대기 <span class="cn" id="cn-ipx">-</span></button>
     <button class="tab" data-tab="storage">⬜ 보관 <span class="cn" id="cn-storage">-</span></button>
     <button class="tab" data-tab="issue">🔴 이슈 <span class="cn" id="cn-issue">-</span></button>
-    <button class="tab" data-tab="release-month">🔵 출고 (<span class="month-cur">5월</span>) <span class="cn" id="cn-release-month">-</span></button>
-    <button class="tab" data-tab="release-other">🔵 출고 (<span class="month-cur">5월</span>外) <span class="cn" id="cn-release-other">-</span></button>
   </div>
 
   <div class="panel" id="panel-zuksi"><h2>즉시출고 가능 차량</h2><div class="desc">계약·출고 이력이 없고 한국 도착이 확정된 차량. 모델별 그룹.</div>
@@ -168,11 +167,11 @@
     <div class="toolbar"><input type="text" id="s-q" placeholder="모델/색상/VIN 검색" /><select id="s-branch"><option value="">지점 전체</option></select></div>
     <div id="s-content"></div>
   </div>
-  <div class="panel" id="panel-contracted" style="display:none;"><h2 id="h2-contracted">대기 계약 (금월)</h2><div class="desc" id="desc-contracted">계약일이 해당월인 모든 재고 차량. 계약일 빠른 순.</div>
+  <div class="panel" id="panel-contracted" style="display:none;"><h2 id="h2-contracted">계약 (금월)</h2><div class="desc" id="desc-contracted">계약일이 해당월인 모든 재고 차량. 계약일 빠른 순.</div>
     <div class="toolbar"><input type="text" id="c-q" placeholder="고객/담당/모델 검색" /></div>
     <div id="c-content"></div>
   </div>
-  <div class="panel" id="panel-contracted-next" style="display:none;"><h2 id="h2-contracted-next">대기 계약 (5월外)</h2><div class="desc" id="desc-contracted-next">계약일이 해당월 외 다른 월인 모든 재고 차량. 계약일 최근순.</div>
+  <div class="panel" id="panel-contracted-next" style="display:none;"><h2 id="h2-contracted-next">계약 (5월外)</h2><div class="desc" id="desc-contracted-next">계약일이 해당월 외 다른 월인 모든 재고 차량. 계약일 최근순.</div>
     <div class="toolbar"><input type="text" id="cn-q" placeholder="고객/담당/모델 검색" /></div>
     <div id="cn-content"></div>
   </div>
@@ -191,10 +190,6 @@
   <div class="panel" id="panel-release-month" style="display:none;"><h2 id="h2-release-month">출고 (5월)</h2><div class="desc" id="desc-release-month">출고일이 해당월인 차량. 출고일 빠른 순.</div>
     <div class="toolbar"><input type="text" id="rm-q" placeholder="고객/담당/모델 검색" /><select id="rm-branch"><option value="">지점 전체</option></select></div>
     <div id="rm-content"></div>
-  </div>
-  <div class="panel" id="panel-release-other" style="display:none;"><h2 id="h2-release-other">출고 (5월外)</h2><div class="desc" id="desc-release-other">출고일이 해당월 외인 차량. 출고일 최근순.</div>
-    <div class="toolbar"><input type="text" id="ro-q" placeholder="고객/담당/모델 검색" /><select id="ro-branch"><option value="">지점 전체</option></select></div>
-    <div id="ro-content"></div>
   </div>
 </div>
 
@@ -423,9 +418,31 @@ function renderCarTable(rows, cols) {
         case 'cs': return `<td>${r.customer||'-'}</td>`;
         case 'vin': return `<td class="nowrap" style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#6b7280;">${r.vin||''}</td>`;
         case 'remark': {
-          const vinVal = r.vin||'';
           const remarkVal = r.remark||'';
-          const copyBtn = vinVal ? `<button onclick="navigator.clipboard.writeText('${vinVal.replace(/'/g,"\'")}').then(()=>{this.textContent='✓ 복사됨';setTimeout(()=>{this.textContent='📋'},800);})" style="background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:10px;margin-left:4px;color:#6b7280;" title="VIN 복사">📋</button>` : '';
+          const lines = [];
+          if (r.model) lines.push(modelShort(r.model) + (r.engine ? ' / ' + r.engine : ''));
+          if (r.my) lines.push('MY: ' + r.my);
+          if (r.ext_color) lines.push('외장: ' + r.ext_color);
+          if (r.int_color) lines.push('내장: ' + r.int_color);
+          if (r.option) lines.push('옵션코드: ' + r.option);
+          if (r.msrp_base) lines.push('기본MSRP: ' + fmt(r.msrp_base));
+          if (r.opt_amount && r.opt_amount.trim() && r.opt_amount !== '0' && r.opt_amount !== '-') lines.push('옵션금액: +' + fmt(r.opt_amount));
+          if (r.msrp) lines.push('★MSRP★: ' + fmt(r.msrp));
+          if (r.arrive) lines.push('항구도착: ' + shortDate(r.arrive));
+          if (r.inbound) lines.push('입고일: ' + shortDate(r.inbound));
+          if (r.purchase_date) lines.push('매입일: ' + shortDate(r.purchase_date));
+          if (r.purchase_type) lines.push('매입타입: ' + r.purchase_type);
+          if (r.contract_date) lines.push('계약일: ' + shortDate(r.contract_date));
+          if (r.release_date) lines.push('출고일: ' + shortDate(r.release_date));
+          if (r.register_date) lines.push('등록완료일: ' + r.register_date);
+          if (r.staff) lines.push('담당: ' + r.staff);
+          if (r.customer) lines.push('고객: ' + r.customer);
+          if (r.branch_disp || r.branch) lines.push('지점: ' + (r.branch_disp||'') + (r.branch ? ' (' + r.branch + ')' : ''));
+          if (r.vin) lines.push('VIN: ' + r.vin);
+          if (remarkVal) lines.push('비고: ' + remarkVal);
+          const fullText = lines.join('\n');
+          const esc = fullText.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          const copyBtn = `<button data-copy="${esc}" onclick="navigator.clipboard.writeText(this.dataset.copy).then(()=>{this.textContent='✓ 복사됨';setTimeout(()=>{this.textContent='📋'},900);})" style="background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:10px;margin-left:4px;color:#6b7280;" title="차량 전체 정보 복사">📋</button>`;
           return `<td style="max-width:230px;color:#6b7280;font-size:11px;">${remarkVal}${copyBtn}</td>`;
         }
         case 'pd': return `<td class="nowrap">${shortDate(r.purchase_date)}</td>`;
@@ -526,14 +543,6 @@ const renderers = {
     rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
     document.getElementById('rm-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
-  'release-other': () => {
-    const q=document.getElementById('ro-q').value.trim();
-    const bf=document.getElementById('ro-branch').value;
-    let rows = DATA.records.filter(r => r.release_date && !r.release_date.startsWith(CUR_YYYY_MM) && r.release_date.startsWith('20') && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
-    if (bf) rows = rows.filter(r => (r.branch||r.release_place||'')=== bf);
-    rows.sort((a,b)=>(b.release_date||'').localeCompare(a.release_date||''));
-    document.getElementById('ro-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
-  },
 };
 
 function renderAll() {
@@ -559,15 +568,12 @@ function renderAll() {
   document.getElementById('cn-issue').textContent = sub['이슈'];
   // 출고 카운트
   const relMonth = DATA.records.filter(r => r.release_date && r.release_date.startsWith(CUR_YYYY_MM)).length;
-  const relOther = DATA.records.filter(r => r.release_date && !r.release_date.startsWith(CUR_YYYY_MM) && r.release_date.startsWith('20')).length;
   document.getElementById('cn-release-month').textContent = relMonth;
-  document.getElementById('cn-release-other').textContent = relOther;
   // 셀렉트 옵션
   fillSel('z-model', [...new Set(DATA.records.filter(r=>r.cat==='즉시출고').map(r=>modelShort(r.model)))].sort());
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
   fillSel('i-model', [...new Set(DATA.records.filter(r=>r.cat==='입항대기').map(r=>modelShort(r.model)))].sort());
   fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
-  fillSel('ro-branch', [...new Set(DATA.records.filter(r=>r.release_date&&!r.release_date.startsWith(CUR_YYYY_MM)&&r.release_date.startsWith('20')).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
   // 차트
   drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
   // 모든 탭 렌더
@@ -646,12 +652,11 @@ document.getElementById('cn-q').addEventListener('input',renderers['contracted-n
 document.getElementById('g-q').addEventListener('input',renderers.storage);
 document.getElementById('x-q').addEventListener('input',renderers.issue);
 ['rm-q','rm-branch'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers['release-month']); e.addEventListener('change',renderers['release-month']);});
-['ro-q','ro-branch'].forEach(id=>{const e=document.getElementById(id); e.addEventListener('input',renderers['release-other']); e.addEventListener('change',renderers['release-other']);});
 
 // 탭
 function activateTab(k) {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === k));
-  ['zuksi','show','contracted','contracted-next','ipx','storage','issue','release-month','release-other'].forEach(id => {
+  ['zuksi','show','contracted','contracted-next','ipx','storage','issue','release-month'].forEach(id => {
     document.getElementById('panel-'+id).style.display = (id===k) ? '' : 'none';
   });
   try { localStorage.setItem('kcc-live-tab', k); } catch(e) {}
@@ -663,29 +668,25 @@ try { const s = localStorage.getItem('kcc-live-tab'); if (s) { const t = documen
 // === 동적 월 라벨 업데이트 ===
 document.querySelectorAll('.month-cur').forEach(el => el.textContent = CURMONTH_STR);
 const lblC = document.getElementById('lbl-contracted');
-if (lblC) lblC.textContent = '대기 계약 (' + CURMONTH_STR + ')';
+if (lblC) lblC.textContent = '계약 (' + CURMONTH_STR + ')';
 const lblCN = document.getElementById('lbl-contracted-next');
-if (lblCN) lblCN.textContent = '대기 계약 (' + CURMONTH_STR + '外)';
+if (lblCN) lblCN.textContent = '계약 (' + CURMONTH_STR + '外)';
 const deltaC = document.getElementById('delta-contracted');
 if (deltaC) deltaC.textContent = '계약일이 ' + CURMONTH_STR;
 const deltaCN = document.getElementById('delta-contracted-next');
 if (deltaCN) deltaCN.textContent = '계약일 ' + CURMONTH_STR + ' 외';
 const h2C = document.getElementById('h2-contracted');
-if (h2C) h2C.textContent = '대기 계약 (' + CURMONTH_STR + ')';
+if (h2C) h2C.textContent = '계약 (' + CURMONTH_STR + ')';
 const h2CN = document.getElementById('h2-contracted-next');
-if (h2CN) h2CN.textContent = '대기 계약 (' + CURMONTH_STR + '外)';
+if (h2CN) h2CN.textContent = '계약 (' + CURMONTH_STR + '外)';
 const descC = document.getElementById('desc-contracted');
 if (descC) descC.textContent = '계약일이 ' + CUR_YYYY_MM + '인 모든 재고 차량. 계약일 빠른 순.';
 const descCN = document.getElementById('desc-contracted-next');
 if (descCN) descCN.textContent = '계약일이 ' + CURMONTH_STR + ' 외 다른 월인 모든 재고 차량. 계약일 최근순.';
 const h2RM = document.getElementById('h2-release-month');
 if (h2RM) h2RM.textContent = '출고 (' + CURMONTH_STR + ')';
-const h2RO = document.getElementById('h2-release-other');
-if (h2RO) h2RO.textContent = '출고 (' + CURMONTH_STR + '外)';
 const descRM = document.getElementById('desc-release-month');
 if (descRM) descRM.textContent = '출고일이 ' + CURMONTH_STR + '인 차량. 출고일 빠른 순.';
-const descRO = document.getElementById('desc-release-other');
-if (descRO) descRO.textContent = '출고일이 ' + CURMONTH_STR + ' 외인 차량. 출고일 최근순.';
 
 // 자동 로드
 loadData();
@@ -719,18 +720,17 @@ setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
 <script>
 (function(){
   function bindChartPopup(){
-    var chartR=Chart.getChart('chart-release');
-    if(!chartR){setTimeout(bindChartPopup,500);return;}
     var canvas=document.getElementById('chart-release');
+    if(!canvas){setTimeout(bindChartPopup,500);return;}
     if(canvas._popupBound)return;
     canvas._popupBound=true;
-    canvas.addEventListener('mousemove',function(e){var pts=chartR.getElementsAtEventForMode(e,'nearest',{intersect:true},false);canvas.style.cursor=pts.length>0?'pointer':'default';});
-    canvas.addEventListener('click',function(e){var pts=chartR.getElementsAtEventForMode(e,'nearest',{intersect:true},false);if(!pts.length)return;var pt=pts[0];var branch=chartR.data.labels[pt.index];var dsLabel=chartR.data.datasets[pt.datasetIndex].label;var type=dsLabel==='출고'?'release':'contract';showChartPopup(branch,type);});
+    canvas.addEventListener('mousemove',function(e){var ch=Chart.getChart('chart-release');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);canvas.style.cursor=pts.length>0?'pointer':'default';});
+    canvas.addEventListener('click',function(e){var ch=Chart.getChart('chart-release');if(!ch)return;var pts=ch.getElementsAtEventForMode(e,'nearest',{intersect:true},false);if(!pts.length)return;var pt=pts[0];var branch=ch.data.labels[pt.index];var dsLabel=ch.data.datasets[pt.datasetIndex].label;var type=dsLabel==='출고'?'release':'contract';showChartPopup(branch,type);});
   }
   function showChartPopup(branch,type){
-    if(!window.DATA||!DATA.records)return;
+    if(typeof DATA==='undefined'||!DATA.records)return;
     var isRelease=(type==='release');var typeLabel=isRelease?'출고':'계약';var badgeClass=isRelease?'release':'contract';
-    var filtered=DATA.records.filter(function(r){var dateVal=isRelease?r.release_date:r.contract_date;if(!dateVal||!dateVal.startsWith(CUR_YYYY_MM))return false;return(r.branch===branch||r.release_place===branch||(!r.branch&&branch==='미지정'));});
+    var filtered=DATA.records.filter(function(r){var dateVal=isRelease?r.release_date:r.contract_date;if(!dateVal||!dateVal.startsWith(CUR_YYYY_MM))return false;var dispBranch=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return(r.branch===branch||r.release_place===branch||dispBranch===branch||(!r.branch&&!r.release_place&&!dispBranch&&branch==='미지정'));});
     filtered.sort(function(a,b){var da=(isRelease?a.release_date:a.contract_date)||'';var db=(isRelease?b.release_date:b.contract_date)||'';return da.localeCompare(db);});
     var cardsHtml='';
     if(!filtered.length){cardsHtml='<div class="cm-empty">해당 데이터가 없습니다.</div>';}
