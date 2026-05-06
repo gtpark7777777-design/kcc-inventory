@@ -352,13 +352,12 @@ function buildRecords(rows) {
     rec.has_contract = !!(rec.contract_no || (rec.contract_date && rec.contract_date.startsWith('20')));
     rec.has_inbound = !!rec.inbound;
     rec.cat = classify(rec, today);
-    // 해당월 출고/계약 — 우선순위: 출고 > 배정 > 계약 (한 차량은 가장 진행된 단계 하나만 카운트)
+    // 해당월 출고/계약 — 각 단계 독립 카운트 (계약일 5월 = 모두, 출고일 5월 = 모두)
     if (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM) && rec.cat !== '보관') {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayRel[b] = (mayRel[b]||0) + 1;
     }
-    // 계약: 출고일/배정일이 모두 없을 때만 카운트
-    if (rec.contract_date && rec.contract_date.startsWith(CUR_YYYY_MM) && !rec.assign_date && !rec.release_date) {
+    if (rec.contract_date && rec.contract_date.startsWith(CUR_YYYY_MM)) {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayCon[b] = (mayCon[b]||0) + 1;
     }
@@ -624,8 +623,8 @@ const renderers = {
   contracted: () => {
     const q=document.getElementById('c-q').value.trim();
     const bf=document.getElementById('c-branch').value;
-    // 우선순위: 출고/배정이 모두 없을 때만 계약(5월)에 표시
-    let rows = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith(CUR_YYYY_MM) && !r.assign_date && !r.release_date && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    // 계약일이 5월인 차량 모두 표시 (배정/출고 진행 여부와 무관 — 독립 지표)
+    let rows = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     if (bf) rows = rows.filter(r => {
       const dispBranch = r.branch_disp ? r.branch_disp.replace('전시차','').replace('보관차','').trim() : '';
       return r.branch === bf || r.release_place === bf || dispBranch === bf;
@@ -635,16 +634,16 @@ const renderers = {
   },
   'contracted-next': () => {
     const q=document.getElementById('cn-q').value.trim();
-    // 우선순위: 출고/배정이 없고 계약일이 5월外
-    let rows = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith(CUR_YYYY_MM) && !r.assign_date && !r.release_date && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    // 계약일이 5월外인 차량 모두 표시
+    let rows = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     rows.sort((a,b)=>(b.contract_date||'').localeCompare(a.contract_date||''));
     document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
   },
   assign: () => {
     const q=document.getElementById('a-q').value.trim();
     const bf=document.getElementById('a-branch').value;
-    // 우선순위: 출고일이 없을 때만 배정(5월)에 표시
-    let rows = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM) && !r.release_date && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    // 배정일이 5월인 차량 모두 표시 (출고 진행 여부와 무관)
+    let rows = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     if (bf) rows = rows.filter(r => {
       const dispBranch = r.branch_disp ? r.branch_disp.replace('전시차','').replace('보관차','').trim() : '';
       return r.branch === bf || r.release_place === bf || dispBranch === bf;
@@ -695,9 +694,9 @@ function renderAll() {
   document.getElementById('k-zuksi').textContent = sub['즉시출고'];
   document.getElementById('k-show').textContent = sub['전시'];
   // 대기 계약 분리: 계약일 기준 — 5월 vs 그 외
-  // 우선순위 원칙: 출고일 > 배정일 > 계약일 (한 차량은 가장 진행된 단계 하나에만 카운트)
-  const contractedMay = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith(CUR_YYYY_MM) && !r.assign_date && !r.release_date).length;
-  const contractedNext = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith(CUR_YYYY_MM) && !r.assign_date && !r.release_date).length;
+  // 각 단계는 독립적인 영업 활동 지표 (한 차량이 여러 단계에 동시 카운트 가능)
+  const contractedMay = DATA.records.filter(r => r.has_contract && (r.contract_date||'').startsWith(CUR_YYYY_MM)).length;
+  const contractedNext = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith(CUR_YYYY_MM)).length;
   document.getElementById('k-contracted').textContent = contractedMay;
   document.getElementById('k-contracted-next').textContent = contractedNext;
   document.getElementById('k-ipx').textContent = sub['입항대기'];
@@ -715,8 +714,8 @@ function renderAll() {
   document.getElementById('cn-release-month').textContent = relMonth;
   const kRelM = document.getElementById('k-release-month');
   if (kRelM) kRelM.textContent = relMonth;
-  // 배정 카운트 (출고일이 없는 차량만 — 출고가 우선)
-  const assignMonth = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM) && !r.release_date).length;
+  // 배정 카운트 — 배정일이 5월인 차량 모두 (출고 진행 여부와 무관)
+  const assignMonth = DATA.records.filter(r => r.assign_date && r.assign_date.startsWith(CUR_YYYY_MM)).length;
   const cnA = document.getElementById('cn-assign'); if (cnA) cnA.textContent = assignMonth;
   const kA = document.getElementById('k-assign'); if (kA) kA.textContent = assignMonth;
   // 셀렉트 옵션
@@ -724,8 +723,8 @@ function renderAll() {
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
   fillSel('i-model', [...new Set(DATA.records.filter(r=>r.cat==='입항대기').map(r=>modelShort(r.model)))].sort());
   fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.cat!=='보관'&&r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
-  fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)&&!r.assign_date&&!r.release_date).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
-  fillSel('a-branch', [...new Set(DATA.records.filter(r=>r.assign_date&&r.assign_date.startsWith(CUR_YYYY_MM)&&!r.release_date).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
+  fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
+  fillSel('a-branch', [...new Set(DATA.records.filter(r=>r.assign_date&&r.assign_date.startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   // 차트
   drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
   // 모든 탭 렌더
