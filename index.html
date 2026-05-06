@@ -510,7 +510,7 @@ function drawCharts(records, mayRel, mayCon) {
 // === 테이블 렌더러 ===
 function renderCarTable(rows, cols) {
   if (!rows.length) return `<div class="empty">표시할 차량이 없습니다.</div>`;
-  const titles = { cat:'분류', branch:'지점', model:'모델', my:'MY', color:'색상', msrp:'★MSRP★', msrpBase:'기본MSRP', opt:'옵션 코드', optAmount:'옵션 금액', arr:'항구도착', inb:'입고', cd:'계약일', rd:'출고일', staff:'담당', cs:'고객', vin:'VIN', remark:'비고', pd:'매입일', pt:'매입타입', reg:'등록완료일' };
+  const titles = { cat:'분류', branch:'지점', model:'모델', my:'MY', color:'색상', msrp:'★MSRP★', msrpBase:'기본MSRP', opt:'옵션 코드', optAmount:'옵션 금액', arr:'항구도착', inb:'입고', cd:'계약일', ad:'배정일', rd:'출고일', staff:'담당', cs:'고객', vin:'VIN', remark:'비고', pd:'매입일', pt:'매입타입', reg:'등록완료일' };
   const head = `<thead><tr>${cols.map(c=>`<th class="${c==='msrp'?'num':''}">${titles[c]||c}</th>`).join('')}</tr></thead>`;
   const body = rows.map(r => {
     const cls = colorClass(r.cat);
@@ -536,6 +536,7 @@ function renderCarTable(rows, cols) {
         case 'arr': return `<td class="nowrap">${shortDate(r.arrive)}</td>`;
         case 'inb': return `<td class="nowrap">${shortDate(r.inbound)}</td>`;
         case 'cd': return `<td class="nowrap">${shortDate(r.contract_date)}</td>`;
+        case 'ad': return `<td class="nowrap" style="color:#ea580c;">${shortDate(r.assign_date)}</td>`;
         case 'rd': return `<td class="nowrap" style="font-weight:600;">${shortDate(r.release_date)}</td>`;
         case 'staff': return `<td class="nowrap">${r.staff||'-'}</td>`;
         case 'cs': return `<td>${r.customer||'-'}</td>`;
@@ -556,6 +557,7 @@ function renderCarTable(rows, cols) {
           if (r.purchase_date) lines.push('매입일: ' + shortDate(r.purchase_date));
           if (r.purchase_type) lines.push('매입타입: ' + r.purchase_type);
           if (r.contract_date) lines.push('계약일: ' + shortDate(r.contract_date));
+          if (r.assign_date) lines.push('배정일: ' + shortDate(r.assign_date));
           if (r.release_date) lines.push('출고일: ' + shortDate(r.release_date));
           if (r.register_date) lines.push('등록완료일: ' + r.register_date);
           if (r.staff) lines.push('담당: ' + r.staff);
@@ -630,14 +632,14 @@ const renderers = {
       return r.branch === bf || r.release_place === bf || dispBranch === bf;
     });
     rows.sort((a,b)=>(a.contract_date||'9').localeCompare(b.contract_date||'9'));
-    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
+    document.getElementById('c-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','ad','rd','arr','reg','staff','cs','vin','remark']);
   },
   'contracted-next': () => {
     const q=document.getElementById('cn-q').value.trim();
     // 계약일이 5월外인 차량 모두 표시
     let rows = DATA.records.filter(r => r.has_contract && r.contract_date && !r.contract_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     rows.sort((a,b)=>(b.contract_date||'').localeCompare(a.contract_date||''));
-    document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
+    document.getElementById('cn-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','ad','rd','arr','reg','staff','cs','vin','remark']);
   },
   assign: () => {
     const q=document.getElementById('a-q').value.trim();
@@ -649,7 +651,7 @@ const renderers = {
       return r.branch === bf || r.release_place === bf || dispBranch === bf;
     });
     rows.sort((a,b)=>(a.assign_date||'9').localeCompare(b.assign_date||'9'));
-    document.getElementById('a-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
+    document.getElementById('a-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','ad','rd','arr','reg','staff','cs','vin','remark']);
   },
   ipx: () => {
     const q=document.getElementById('i-q').value.trim();
@@ -683,7 +685,7 @@ const renderers = {
     let rows = DATA.records.filter(r => r.cat !== '보관' && r.release_date && r.release_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     if (bf) rows = rows.filter(r => (r.branch||r.release_place||'')=== bf);
     rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
-    document.getElementById('rm-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
+    document.getElementById('rm-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','ad','rd','arr','reg','staff','cs','vin','remark']);
   },
 };
 
@@ -899,7 +901,7 @@ if (descA) descA.textContent = '배정일이 ' + CURMONTH_STR + '인 차량. 배
 loadData();
 
 // 30분마다 자동 새로고침
-setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
+setInterval(loadData, 15 * 60 * 1000); // 15분마다 자동 새로고침
 </script>
 
 <!-- Chart Click Popup -->
