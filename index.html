@@ -45,6 +45,8 @@
 
   .chart-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:14px; }
   .chart-row.full { grid-template-columns:1fr; }
+  .chart-row.bottom { grid-template-columns:3fr 1fr; }
+  @media (max-width:1100px) { .chart-row.bottom { grid-template-columns:1fr; } }
   .chart-card { background:#fff; border:1px solid #e3e6ea; border-radius:10px; padding:13px; }
   .chart-card h3 { margin:0 0 6px 0; font-size:13px; font-weight:600; color:#111827; }
   .chart-card .chart-box { position:relative; height:240px; }
@@ -152,10 +154,14 @@
     </div>
   </div>
 
-  <div class="chart-row full">
+  <div class="chart-row bottom">
     <div class="chart-card">
       <h3 id="h3-ipx">🟪 입항대기 차량 (입항 예정 · 모델별)</h3>
       <div class="chart-box ipx-box"><canvas id="chart-ipx"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>⬛ 보관 · 🟥 이슈 (모델별)</h3>
+      <div class="chart-box ipx-box"><canvas id="chart-si"></canvas></div>
     </div>
   </div>
 
@@ -330,8 +336,8 @@ function buildRecords(rows) {
     rec.has_contract = !!(rec.contract_no || (rec.contract_date && rec.contract_date.startsWith('20')));
     rec.has_inbound = !!rec.inbound;
     rec.cat = classify(rec, today);
-    // 해당월 출고/계약 — contract_date / release_date 정확히 매칭
-    if (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM)) {
+    // 해당월 출고/계약 — contract_date / release_date 정확히 매칭 (보관 분류 제외)
+    if (rec.release_date && rec.release_date.startsWith(CUR_YYYY_MM) && rec.cat !== '보관') {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayRel[b] = (mayRel[b]||0) + 1;
     }
@@ -347,7 +353,7 @@ function buildRecords(rows) {
 }
 
 // === 차트 인스턴스 ===
-let chartZ = null, chartR = null, chartS = null, chartIPX = null;
+let chartZ = null, chartR = null, chartS = null, chartIPX = null, chartSI = null;
 function destroyChart(c) { if (c) c.destroy(); }
 const SHOW_COLORS = ['#0f766e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 function drawCharts(records, mayRel, mayCon) {
@@ -432,6 +438,47 @@ function drawCharts(records, mayRel, mayCon) {
         tooltip: {
           callbacks: {
             title: items => items.length ? `입항 ${items[0].label}` : '',
+            label: c => `${c.dataset.label}: ${c.parsed.y}대`,
+            footer: items => {
+              const total = items.reduce((s, it) => s + (it.parsed.y || 0), 0);
+              return `합계: ${total}대`;
+            }
+          }
+        }
+      }
+    }
+  });
+  // 보관 + 이슈 차트 — 모델별 스택 바
+  const siCats = ['보관', '이슈'];
+  const siByCat = { '보관': {}, '이슈': {} };
+  records.forEach(r => {
+    if (r.cat === '보관' || r.cat === '이슈') {
+      const m = modelShort(r.model) || '기타';
+      siByCat[r.cat][m] = (siByCat[r.cat][m]||0) + 1;
+    }
+  });
+  const siModels = [...new Set([...Object.keys(siByCat['보관']), ...Object.keys(siByCat['이슈'])])].sort();
+  const siDatasets = siModels.map((m, idx) => ({
+    label: m,
+    data: siCats.map(c => siByCat[c][m] || 0),
+    backgroundColor: SHOW_COLORS[idx % SHOW_COLORS.length],
+    borderRadius: 3,
+    stack: 'si'
+  }));
+  destroyChart(chartSI);
+  chartSI = new Chart(document.getElementById('chart-si'), {
+    type: 'bar',
+    data: { labels: siCats, datasets: siDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0, stepSize: 1 } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
             label: c => `${c.dataset.label}: ${c.parsed.y}대`,
             footer: items => {
               const total = items.reduce((s, it) => s + (it.parsed.y || 0), 0);
@@ -603,7 +650,7 @@ const renderers = {
   'release-month': () => {
     const q=document.getElementById('rm-q').value.trim();
     const bf=document.getElementById('rm-branch').value;
-    let rows = DATA.records.filter(r => r.release_date && r.release_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
+    let rows = DATA.records.filter(r => r.cat !== '보관' && r.release_date && r.release_date.startsWith(CUR_YYYY_MM) && srch(r,q,['model','engine','customer','staff','ext_color','vin']));
     if (bf) rows = rows.filter(r => (r.branch||r.release_place||'')=== bf);
     rows.sort((a,b)=>(a.release_date||'9').localeCompare(b.release_date||'9'));
     document.getElementById('rm-content').innerHTML = renderCarTable(rows, ['cat','branch','model','my','color','opt','msrp','cd','rd','arr','reg','staff','cs','vin','remark']);
@@ -632,7 +679,7 @@ function renderAll() {
   document.getElementById('cn-storage').textContent = sub['보관'];
   document.getElementById('cn-issue').textContent = sub['이슈'];
   // 출고 카운트 (탭 + KPI 카드 양쪽 업데이트)
-  const relMonth = DATA.records.filter(r => r.release_date && r.release_date.startsWith(CUR_YYYY_MM)).length;
+  const relMonth = DATA.records.filter(r => r.cat !== '보관' && r.release_date && r.release_date.startsWith(CUR_YYYY_MM)).length;
   document.getElementById('cn-release-month').textContent = relMonth;
   const kRelM = document.getElementById('k-release-month');
   if (kRelM) kRelM.textContent = relMonth;
@@ -640,7 +687,7 @@ function renderAll() {
   fillSel('z-model', [...new Set(DATA.records.filter(r=>r.cat==='즉시출고').map(r=>modelShort(r.model)))].sort());
   fillSel('s-branch', [...new Set(DATA.records.filter(r=>r.cat==='전시').map(r=>r.branch_disp).filter(Boolean))].sort());
   fillSel('i-model', [...new Set(DATA.records.filter(r=>r.cat==='입항대기').map(r=>modelShort(r.model)))].sort());
-  fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
+  fillSel('rm-branch', [...new Set(DATA.records.filter(r=>r.cat!=='보관'&&r.release_date&&r.release_date.startsWith(CUR_YYYY_MM)).map(r=>r.branch||r.release_place).filter(Boolean))].sort());
   fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   // 차트
   drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
@@ -890,6 +937,12 @@ setInterval(loadData, 60 * 1000); // 1분마다 자동 새로고침
       var modelLabel = ch.data.datasets[pt.datasetIndex].label;
       activateAndScroll('ipx');
       setSelectAndFire('i-model', modelLabel);
+    });
+    // 5. 보관/이슈 → 해당 탭으로 이동 (X축 라벨로 카테고리 식별)
+    bindCanvas('chart-si', function(ch, pt){
+      var category = ch.data.labels[pt.index];  // '보관' or '이슈'
+      var tabKey = category === '이슈' ? 'issue' : 'storage';
+      activateAndScroll(tabKey);
     });
   }
   if(document.readyState==='loading'){
