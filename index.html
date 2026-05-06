@@ -761,8 +761,12 @@ async function loadData() {
         today = d.today;
         sheetCounts.push(`${r.src.label} ${d.records.length}대`);
         for (const rec of d.records) {
-          // 강제 분류 (입항예정 탭은 입항대기로)
-          if (r.src.forceCat) rec.cat = r.src.forceCat;
+          // 강제 분류 (입항예정 시트는 입항대기로 — 단, 배정일/계약일이 있으면 우선순위에 따라 분류 유지)
+          if (r.src.forceCat) {
+            const hasProgressed = rec.assign_date || (rec.has_contract && rec.contract_date) || rec.release_date;
+            if (!hasProgressed) rec.cat = r.src.forceCat;
+            // hasProgressed이면 classify 결과 그대로 유지 (배정/계약차량/출고완료 등)
+          }
           const key = (rec.order_no || '') + '|' + (rec.vin || '');
           if (key === '|') continue; // 빈 행 skip
           if (seen.has(key)) continue;
