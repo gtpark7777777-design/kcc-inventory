@@ -313,7 +313,7 @@ function classify(r, today) {
 
 // === 시트 → records 변환 ===
 function buildRecords(rows) {
-  if (!rows.length) return { records: [], today: todayStr(), mayRelease: {}, mayContract: {} };
+  if (!rows.length) return { records: [], today: todayStr(), mayRelease: {}, mayContract: {}, mayAssign: {} };
   // 헤더 행 찾기 (Model + Engine + 출고일 다 포함)
   let hidx = rows.findIndex(r => r.some(c=>c.includes('Model')) && r.some(c=>c.includes('Engine')) && r.some(c=>c.includes('출고일')) && r.some(c=>c.includes('계약일')));
   if (hidx < 0) throw new Error('재고 헤더 행을 찾지 못했습니다 (Model/Engine/출고일/계약일 컬럼)');
@@ -382,7 +382,7 @@ function buildRecords(rows) {
 let chartZ = null, chartR = null, chartS = null, chartIPX = null, chartSI = null, chartTotal = null;
 function destroyChart(c) { if (c) c.destroy(); }
 const SHOW_COLORS = ['#0f766e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
-function drawCharts(records, mayRel, mayCon) {
+function drawCharts(records, mayRel, mayCon, mayAss) {
   // 즉시출고 모델별
   const zuksi = records.filter(r => r.cat === '즉시출고');
   const byModel = {};
@@ -623,7 +623,7 @@ function groupBy(rows, fn) { const m={}; rows.forEach(r=>{const k=fn(r); (m[k]=m
 function srch(r,q,ks) { if(!q) return true; const s=ks.map(k=>r[k]||'').join(' ').toLowerCase(); return s.includes(q.toLowerCase()); }
 
 // === 전역 데이터 + 렌더 함수 ===
-let DATA = { records: [], today: todayStr(), mayRelease:{}, mayContract:{} };
+let DATA = { records: [], today: todayStr(), mayRelease:{}, mayContract:{}, mayAssign:{} };
 
 function fillSel(id, vals) {
   const s = document.getElementById(id);
@@ -761,7 +761,7 @@ function renderAll() {
   fillSel('c-branch', [...new Set(DATA.records.filter(r=>r.has_contract&&(r.contract_date||'').startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   fillSel('a-branch', [...new Set(DATA.records.filter(r=>r.assign_date&&r.assign_date.startsWith(CUR_YYYY_MM)).map(r=>{const d=r.branch_disp?r.branch_disp.replace('전시차','').replace('보관차','').trim():'';return r.branch||r.release_place||d;}).filter(Boolean))].sort());
   // 차트
-  drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract);
+  drawCharts(DATA.records, DATA.mayRelease, DATA.mayContract, DATA.mayAssign);
   // 모든 탭 렌더
   Object.values(renderers).forEach(fn => fn());
 }
@@ -786,7 +786,7 @@ async function loadData() {
     const seenAll = new Set();
     let mergedRecords = [];
     let mergedAllRecords = [];
-    let mergedMayRel = {}, mergedMayCon = {};
+    let mergedMayRel = {}, mergedMayCon = {}, mergedMayAss = {};
     let today = todayStr();
     const sheetCounts = [];
     for (const r of results) {
@@ -816,17 +816,18 @@ async function loadData() {
           seenAll.add(key);
           mergedAllRecords.push(rec);
         }
-        // 5월 출고/계약은 전체재고 탭만 사용 (중복 카운트 방지)
+        // 5월 출고/계약/배정은 전체재고 탭만 사용 (중복 카운트 방지)
         if (r.src.label === '전체재고') {
           mergedMayRel = d.mayRelease;
           mergedMayCon = d.mayContract;
+          mergedMayAss = d.mayAssign;
         }
       } catch (e) {
         console.warn(r.src.label + ' 파싱 실패:', e);
         sheetCounts.push(`${r.src.label} ⚠`);
       }
     }
-    DATA = { records: mergedRecords, allRecords: mergedAllRecords, today, mayRelease: mergedMayRel, mayContract: mergedMayCon };
+    DATA = { records: mergedRecords, allRecords: mergedAllRecords, today, mayRelease: mergedMayRel, mayContract: mergedMayCon, mayAssign: mergedMayAss };
     renderAll();
     const now = new Date();
     document.getElementById('snap-badge').textContent = `마지막 갱신 · ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
