@@ -47,9 +47,11 @@
   .kpi.issue .value { color:#b91c1c; }
 
   .chart-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:14px; }
+  .chart-row.top4 { grid-template-columns:1fr 1fr 1fr 1fr; }
   .chart-row.full { grid-template-columns:1fr; }
   .chart-row.bottom { grid-template-columns:3fr 1fr; }
-  @media (max-width:1100px) { .chart-row.bottom { grid-template-columns:1fr; } }
+  @media (max-width:1100px) { .chart-row.bottom { grid-template-columns:1fr; } .chart-row.top4 { grid-template-columns:1fr 1fr; } }
+  @media (min-width:1101px) and (max-width:1400px) { .chart-row.top4 { grid-template-columns:1fr 1fr; } }
   .chart-card { background:#fff; border:1px solid #e3e6ea; border-radius:10px; padding:13px; }
   .chart-card h3 { margin:0 0 6px 0; font-size:13px; font-weight:600; color:#111827; }
   .chart-card .chart-box { position:relative; height:240px; }
@@ -146,13 +148,17 @@
     <div class="kpi issue" data-tab="issue"><div class="label">이슈 ⚠</div><div class="value" id="k-issue">-</div><div class="delta">문제 차량</div></div>
   </div>
 
-  <div class="chart-row">
+  <div class="chart-row top4">
     <div class="chart-card">
       <h3>모델별 즉시출고 가능 대수</h3>
       <div class="chart-box"><canvas id="chart-zuksi"></canvas></div>
     </div>
     <div class="chart-card">
-      <h3>지점별 이번달 계약 · 출고</h3>
+      <h3>KCC 전체 (계약 · 배정 · 출고)</h3>
+      <div class="chart-box"><canvas id="chart-total"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>지점별 이번달 계약 · 배정 · 출고</h3>
       <div class="chart-box"><canvas id="chart-release"></canvas></div>
     </div>
     <div class="chart-card">
@@ -329,7 +335,7 @@ function buildRecords(rows) {
   };
   const today = todayStr();
   const records = [];
-  const mayRel = {}; const mayCon = {};
+  const mayRel = {}; const mayCon = {}; const mayAss = {};
   for (let i = hidx + 1; i < rows.length; i++) {
     const c = rows[i];
     if (!c[ci.order] && !c[ci.model]) continue; // skip empty
@@ -361,15 +367,19 @@ function buildRecords(rows) {
       const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
       mayCon[b] = (mayCon[b]||0) + 1;
     }
+    if (rec.assign_date && rec.assign_date.startsWith(CUR_YYYY_MM)) {
+      const b = rec.branch || rec.release_place || (rec.branch_disp ? rec.branch_disp.replace('전시차','').replace('보관차','').trim() : '') || '미지정';
+      mayAss[b] = (mayAss[b]||0) + 1;
+    }
     records.push(rec);
   }
   // 출고완료 제외
   const inStock = records.filter(r => r.cat !== '출고완료');
-  return { records: inStock, allRecords: records, today, mayRelease: mayRel, mayContract: mayCon };
+  return { records: inStock, allRecords: records, today, mayRelease: mayRel, mayContract: mayCon, mayAssign: mayAss };
 }
 
 // === 차트 인스턴스 ===
-let chartZ = null, chartR = null, chartS = null, chartIPX = null, chartSI = null;
+let chartZ = null, chartR = null, chartS = null, chartIPX = null, chartSI = null, chartTotal = null;
 function destroyChart(c) { if (c) c.destroy(); }
 const SHOW_COLORS = ['#0f766e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 function drawCharts(records, mayRel, mayCon) {
@@ -384,14 +394,37 @@ function drawCharts(records, mayRel, mayCon) {
     data: { labels, datasets: [{ label:'대수', data: labels.map(k=>byModel[k]), backgroundColor:'#0f766e' }] },
     options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{ticks:{precision:0}}}, plugins:{legend:{display:false}} }
   });
-  // 5월 출고/계약
-  const branches = [...new Set([...Object.keys(mayRel), ...Object.keys(mayCon)])]
-    .sort((a,b)=>(mayRel[b]||0)+(mayCon[b]||0) - ((mayRel[a]||0)+(mayCon[a]||0)));
+  // KCC 전체 (계약·배정·출고 합계)
+  const totalCon = Object.values(mayCon).reduce((s,v)=>s+v, 0);
+  const totalAss = Object.values(mayAss).reduce((s,v)=>s+v, 0);
+  const totalRel = Object.values(mayRel).reduce((s,v)=>s+v, 0);
+  destroyChart(chartTotal);
+  chartTotal = new Chart(document.getElementById('chart-total'), {
+    type:'bar',
+    data: { labels: ['계약', '배정', '출고'], datasets: [{
+      label:'대수',
+      data: [totalCon, totalAss, totalRel],
+      backgroundColor: ['#22c55e', '#06b6d4', '#3b82f6'],
+      borderRadius: 4
+    }]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, ticks:{precision:0} } },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: c => `${c.label}: ${c.parsed.y}대` } }
+      }
+    }
+  });
+  // 5월 계약·배정·출고 (지점별)
+  const branches = [...new Set([...Object.keys(mayRel), ...Object.keys(mayCon), ...Object.keys(mayAss)])]
+    .sort((a,b)=>((mayRel[b]||0)+(mayCon[b]||0)+(mayAss[b]||0)) - ((mayRel[a]||0)+(mayCon[a]||0)+(mayAss[a]||0)));
   destroyChart(chartR);
   chartR = new Chart(document.getElementById('chart-release'), {
     type:'bar',
     data: { labels: branches, datasets: [
       { label:'계약', data: branches.map(b=>mayCon[b]||0), backgroundColor:'#22c55e', borderRadius:4 },
+      { label:'배정', data: branches.map(b=>mayAss[b]||0), backgroundColor:'#06b6d4', borderRadius:4 },
       { label:'출고', data: branches.map(b=>mayRel[b]||0), backgroundColor:'#3b82f6', borderRadius:4 }
     ]},
     options: { responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true,ticks:{precision:0,stepSize:1}}}, plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}대`}}} },
@@ -974,10 +1007,20 @@ setInterval(loadData, 15 * 60 * 1000); // 15분마다 자동 새로고침
       if(dsLabel === '출고'){
         activateAndScroll('release-month');
         setSelectAndFire('rm-branch', branch);
+      } else if(dsLabel === '배정'){
+        activateAndScroll('assign');
+        setSelectAndFire('a-branch', branch);
       } else {
         activateAndScroll('contracted');
         setSelectAndFire('c-branch', branch);
       }
+    });
+    // 1-2. KCC 전체 차트 → 라벨로 탭 이동
+    bindCanvas('chart-total', function(ch, pt){
+      var label = ch.data.labels[pt.index];
+      if(label === '출고') activateAndScroll('release-month');
+      else if(label === '배정') activateAndScroll('assign');
+      else activateAndScroll('contracted');
     });
     // 3. 지점별 전시 → 전시 탭 + 지점 필터 (branch_disp 그대로)
     bindCanvas('chart-show', function(ch, pt){
