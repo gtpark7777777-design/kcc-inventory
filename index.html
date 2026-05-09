@@ -1,4 +1,82 @@
 <!DOCTYPE html>
+<!-- ==================== 🔒 KCC 비밀번호 게이트 시작 ==================== -->
+<div id="kcc-auth-gate" style="position:fixed;inset:0;z-index:99999;background:#0a0a0a;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'Segoe UI',sans-serif;">
+  <div style="width:90%;max-width:380px;padding:40px 32px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;text-align:center;color:#fff;">
+    <div style="font-size:11px;letter-spacing:4px;color:#888;margin-bottom:10px;">KCC AUTOMOBILE</div>
+    <h1 style="font-size:17px;font-weight:600;margin:0 0 28px 0;">STOCK DASHBOARD 인증</h1>
+    <form id="kcc-auth-form" style="display:flex;flex-direction:column;gap:12px;">
+      <input id="kcc-auth-input" type="password" placeholder="비밀번호" autocomplete="off" style="width:100%;padding:14px 16px;background:#0a0a0a;border:1px solid #333;border-radius:8px;color:#fff;font-size:14px;text-align:center;letter-spacing:2px;outline:none;box-sizing:border-box;" />
+      <button type="submit" style="width:100%;padding:14px;background:#fff;color:#000;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:1px;">접속</button>
+    </form>
+    <div id="kcc-auth-msg" style="margin-top:16px;font-size:12px;color:#ff6b6b;min-height:18px;"></div>
+    <div style="margin-top:24px;font-size:11px;color:#555;line-height:1.6;">외부 공유 금지 · 일산지점 영업팀 전용</div>
+  </div>
+</div>
+<script>
+(function() {
+  const PASSWORD_HASH = "57ce39e7af0f78ba012f2e464a90a6d25cf6ff8b8b61c7c6a27667f229c478a2";
+  const SESSION_HOURS = 4;
+  const MAX_ATTEMPTS  = 5;
+  const LOCK_MINUTES  = 10;
+  const gate  = document.getElementById('kcc-auth-gate');
+  const form  = document.getElementById('kcc-auth-form');
+  const input = document.getElementById('kcc-auth-input');
+  const msg   = document.getElementById('kcc-auth-msg');
+  document.documentElement.style.overflow = 'hidden';
+  try {
+    const s = JSON.parse(sessionStorage.getItem('kcc_auth') || 'null');
+    if (s && s.expires > Date.now()) { removeGate(); return; }
+  } catch(e) {}
+  function checkLock() {
+    try {
+      const lock = JSON.parse(localStorage.getItem('kcc_lock') || 'null');
+      if (lock && lock.until > Date.now()) {
+        const min = Math.ceil((lock.until - Date.now()) / 60000);
+        msg.textContent = '시도 횟수 초과 · ' + min + '분 후 재시도';
+        input.disabled = true;
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+  checkLock();
+  async function sha256(text) {
+    const buf  = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  function removeGate() {
+    document.documentElement.style.overflow = '';
+    gate.remove();
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (checkLock()) return;
+    const hash = await sha256(input.value);
+    if (hash === PASSWORD_HASH) {
+      sessionStorage.setItem('kcc_auth', JSON.stringify({ expires: Date.now() + SESSION_HOURS * 3600 * 1000 }));
+      localStorage.removeItem('kcc_attempts');
+      removeGate();
+    } else {
+      let n = parseInt(localStorage.getItem('kcc_attempts') || '0') + 1;
+      localStorage.setItem('kcc_attempts', n);
+      if (n >= MAX_ATTEMPTS) {
+        localStorage.setItem('kcc_lock', JSON.stringify({ until: Date.now() + LOCK_MINUTES * 60000 }));
+        localStorage.removeItem('kcc_attempts');
+        msg.textContent = '시도 횟수 초과 · ' + LOCK_MINUTES + '분 후 재시도';
+        input.disabled = true;
+      } else {
+        msg.textContent = '비밀번호가 올바르지 않습니다 (' + n + '/' + MAX_ATTEMPTS + ')';
+        input.value = '';
+        input.focus();
+      }
+    }
+  });
+  input.focus();
+})();
+</script>
+<!-- ==================== 🔒 KCC 비밀번호 게이트 끝 ==================== -->
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
